@@ -248,10 +248,10 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # low = -np.inf * np.ones(self.scara_chain.getNrOfJoints())
         # high = np.inf * np.ones(self.scara_chain.getNrOfJoints())
         # print("Action spaces: ", low, high)
-        self.action_space = spaces.Box(low, high, dtype=float32)
+        self.action_space = spaces.Box(low, high, dtype=np.float32)
         high = np.inf*np.ones(self.obs_dim)
         low = -high
-        self.observation_space = spaces.Box(low, high, dtype=float32)
+        self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
         self.add_model = rospy.ServiceProxy('/gazebo/spawn_urdf_model', SpawnModel)
         self.remove_model = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
