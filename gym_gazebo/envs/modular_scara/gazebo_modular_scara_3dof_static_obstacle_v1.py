@@ -222,9 +222,9 @@ class GazeboModularScara3DOFStaticObstaclev1Env(gazebo_env.GazeboEnv):
 
         print("nr of joints: ", self.scara_chain.getNrOfJoints())
 
-        # TODO review with Risto, we might need the first observation for calling _step()
+        # TODO review with Risto, we might need the first observation for calling step()
         # # taken from mujoco in OpenAi how to initialize observation space and action space.
-        # observation, _reward, done, _info = self._step(np.zeros(self.scara_chain.getNrOfJoints()))
+        # observation, _reward, done, _info = self.step(np.zeros(self.scara_chain.getNrOfJoints()))
         # assert not done
         # self.obs_dim = observation.size
         self.obs_dim = self.scara_chain.getNrOfJoints() + 6 # hardcode it for now
@@ -431,7 +431,6 @@ class GazeboModularScara3DOFStaticObstaclev1Env(gazebo_env.GazeboEnv):
         Callback method for the subscriber of Collision data
         """
         self._torque_msg =  message
-
 
     def normals_callback(self, message):
         """
@@ -657,7 +656,7 @@ class GazeboModularScara3DOFStaticObstaclev1Env(gazebo_env.GazeboEnv):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def _step(self, action):
+    def step(self, action):
         """
         Implement the environment step abstraction. Execute action and returns:
             - reward
@@ -717,8 +716,6 @@ class GazeboModularScara3DOFStaticObstaclev1Env(gazebo_env.GazeboEnv):
             elif torque_value > 0.01 and torque_value > 0.1:
                     self.reward = self.reward - (abs(torque_value))
                     print("\n Reward, torque penalization", self.reward)
-# >>>>>>> 5534657d7384ea47ae3ebbf2ddc1ff9b68d9a0be
-
 
         # # Take an observation
         self.ob = self.take_observation()
@@ -918,7 +915,7 @@ class GazeboModularScara3DOFStaticObstaclev1Env(gazebo_env.GazeboEnv):
             except (rospy.ServiceException) as e:
                 print ("/gazebo/spawn_urdf_model service call failed")
 
-    def _reset(self):
+    def reset(self):
         # """
         # Reset the agent for a particular experiment condition.
         # """
