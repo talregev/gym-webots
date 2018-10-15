@@ -708,7 +708,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             else:
                 self.reward = self.reward_dist
 
-        done = bool((abs(self.reward_dist) < 0.01) or (self.iterator>self.max_episode_steps))
+        done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
 
         # Return the corresponding observations, rewards, etc.
         # TODO, understand better what's the last object to return
