@@ -29,6 +29,7 @@ from cv_bridge import CvBridge, CvBridgeError
 # from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint # Used for publishing scara joint angles.
 # from control_msgs.msg import JointTrajectoryControllerState
 # from std_msgs.msg import String
+from std_msgs.msg import Empty as stdEmpty
 
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import JointTrajectoryControllerState
@@ -131,6 +132,10 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # Topics for the robot publisher and subscriber.
         JOINT_PUBLISHER = '/mara_controller/command'
         JOINT_SUBSCRIBER = '/mara_controller/state'
+        RAND_LIGHT_PUBLISHER = '/randomizers/randomizer/light'
+        RAND_SKY_PUBLISHER = '/randomizers/randomizer/sky'
+        RAND_PHYSICS_PUBLISHER = '/randomizers/randomizer/physics'
+        RAND_OBSTACLES_PUBLISHER = '/randomizers/randomizer/obstacles'
 
         # joint names:
         MOTOR1_JOINT = 'motor1'
@@ -208,6 +213,11 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self._sub = rospy.Subscriber(JOINT_SUBSCRIBER, JointTrajectoryControllerState, self.observation_callback)
 
         self._sub_coll = rospy.Subscriber('/gazebo_contacts',ContactState, self.collision_callback)
+
+        self._pub_rand_light = rospy.Publisher(RAND_LIGHT_PUBLISHER, stdEmpty)
+        self._pub_rand_sky = rospy.Publisher(RAND_SKY_PUBLISHER, stdEmpty)
+        self._pub_rand_physics = rospy.Publisher(RAND_PHYSICS_PUBLISHER, stdEmpty)
+        self._pub_rand_obstacles = rospy.Publisher(RAND_OBSTACLES_PUBLISHER, stdEmpty)
 
         # Initialize a tree structure from the robot urdf.
         #   note that the xacro of the urdf is updated by hand.
@@ -742,6 +752,10 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         """
         Reset the agent for a particular experiment condition.
         """
+        self._pub_rand_light.publish()
+        self._pub_rand_sky.publish()
+        self._pub_rand_physics.publish()
+        self._pub_rand_obstacles.publish()
 
         self.iterator = 0
 
