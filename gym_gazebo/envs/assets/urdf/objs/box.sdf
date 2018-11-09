@@ -35,7 +35,7 @@
           <script>
             <uri>model://Media/materials/scripts</uri>
             <uri>model://Media/materials/textures</uri>
-            <name>Dirty</name>
+            <name>Perlin</name>
           </script>
         </material>
       </visual>

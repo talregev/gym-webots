@@ -12,6 +12,7 @@
 		</inertial>
 	</link>
 	<gazebo reference="link_red_point">
+		<turnGravityOff>true</turnGravityOff>
 		<material>
 			Gazebo/Red
 		</material>

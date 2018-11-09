@@ -297,25 +297,25 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         except rospy.ServiceException as e:
             print('Error adding urdf model')
 
-        # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube_random.sdf'
-        # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube.sdf'
-        self.obj_path = self.envs_path + '/assets/urdf/objs/box.sdf'
-        # self.obj_path = self.envs_path + '/assets/urdf/objs/red_point.urdf'
-        file_sdf = open(self.obj_path ,mode='r')
-        model_sdf = file_sdf.read()
-        file_sdf.close()
-
-        rospy.wait_for_service('/gazebo/spawn_sdf_model')
-        # rospy.wait_for_service('/gazebo/spawn_urdf_model')
-        try:
-            # self.add_model_urdf(model_name="obj",
-            self.add_model_sdf(model_name="obj",
-                                model_xml=model_sdf,
-                                robot_namespace="",
-                                initial_pose=pose,
-                                reference_frame="world")
-        except rospy.ServiceException as e:
-            print('Error adding sdf model')
+        # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube_random.sdf'
+        # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube.sdf'
+        # self.obj_path = self.envs_path + '/assets/urdf/objs/box.sdf'
+        # # self.obj_path = self.envs_path + '/assets/urdf/objs/red_point.urdf'
+        # file_sdf = open(self.obj_path ,mode='r')
+        # model_sdf = file_sdf.read()
+        # file_sdf.close()
+        #
+        # rospy.wait_for_service('/gazebo/spawn_sdf_model')
+        # # rospy.wait_for_service('/gazebo/spawn_urdf_model')
+        # try:
+        #     # self.add_model_urdf(model_name="obj",
+        #     self.add_model_sdf(model_name="obj",
+        #                         model_xml=model_sdf,
+        #                         robot_namespace="",
+        #                         initial_pose=pose,
+        #                         reference_frame="world")
+        # except rospy.ServiceException as e:
+        #     print('Error adding sdf model')
 
         self._seed()
 
@@ -381,6 +381,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
     def randomizeObjectType(self, current_obj_name=None, list_obj=None, replace=None):
         obj = ModelState()
+
         rospy.wait_for_service('gazebo/get_model_state')
         try:
             obj = self.get_model_state("target", '')
@@ -395,6 +396,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
         if replace is None:
             random_obj = np.random.choice(list_obj)
+            self.obj_path = random_obj
         else:
             random_obj = replace
 
@@ -751,9 +753,13 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_obstacles.publish()
         # self.randomizeTargetPose("obj")
         # self.randomizeTexture("obj")
+
         # common_path = self.envs_path + "/assets/urdf/objs/"
         # path_list = [common_path + "rubik_cube/rubik_cube_random.sdf", common_path + "rubik_cube/rubik_cube.sdf",
         #             common_path + "box.sdf", common_path + "red_point.urdf"]
+        # for pl in path_list:
+        #     if pl == self.obj_path:
+        #         path_list.remove(pl)
         # self.randomizeObjectType("obj", path_list)
 
         self.iterator = 0
