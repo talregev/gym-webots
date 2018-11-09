@@ -15,7 +15,7 @@ import copy
 import rospkg
 import threading # Used for time locks to synchronize position data.
 
-from gazebo_msgs.srv import SpawnModel, DeleteModel
+from gazebo_msgs.srv import SpawnModel, DeleteModel, SetModelState, SetLinkState, GetModelState
 
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import WrenchStamped
@@ -219,6 +219,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self._pub_rand_sky = rospy.Publisher(RAND_SKY_PUBLISHER, stdEmpty)
         self._pub_rand_physics = rospy.Publisher(RAND_PHYSICS_PUBLISHER, stdEmpty)
         self._pub_rand_obstacles = rospy.Publisher(RAND_OBSTACLES_PUBLISHER, stdEmpty)
+        self._pub_link_state = rospy.Publisher(LINK_STATE_PUBLISHER, LinkState)
 
         # Initialize a tree structure from the robot urdf.
         #   note that the xacro of the urdf is updated by hand.
@@ -262,10 +263,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         low = -high
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
-        self.add_model = rospy.ServiceProxy('/gazebo/spawn_urdf_model', SpawnModel)
+        self.add_model_urdf = rospy.ServiceProxy('/gazebo/spawn_urdf_model', SpawnModel)
+        self.add_model_sdf = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
         self.remove_model = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+        self.set_model_pose = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+        self.get_model_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
         self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
-        self.reset_world = rospy.ServiceProxy('/gazebo/reset_world', Empty)
 
         robot_namespace = ""
         pose = Pose()
@@ -343,84 +346,42 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             print("slowness_unit: ", self.slowness_unit, "type of variable: ", type(slowness_unit))
             print("reset joints: ", self.reset_jnts, "type of variable: ", type(self.reset_jnts))
 
-    def randomizeTargetPositions(self):
-        """
-        The goal is to test with randomized positions which range between the boundries of the H-ROS logo
-        """
-        print("In randomize target positions.")
-        EE_POS_TGT_RANDOM1 = np.asmatrix([np.random.uniform(0.2852485,0.3883636), np.random.uniform(-0.1746508,0.1701576), 0.2868]) # boundry box of the first half H-ROS letters with +-0.01 offset
-        EE_POS_TGT_RANDOM2 = np.asmatrix([np.random.uniform(0.2852485,0.3883636), np.random.uniform(-0.1746508,0.1701576), 0.2868]) # boundry box of the H-ROS letters with +-0.01 offset
-        # EE_POS_TGT_RANDOM1 = np.asmatrix([np.random.uniform(0.2852485, 0.3883636), np.random.uniform(-0.1746508, 0.1701576), 0.3746]) # boundry box of whole box H-ROS letters with +-0.01 offset
-        EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        EE_POINTS = np.asmatrix([[0, 0, 0]])
-        ee_pos_tgt_random1 = EE_POS_TGT_RANDOM1
-        ee_pos_tgt_random2 = EE_POS_TGT_RANDOM2
+    def randomizeStartPose(self, lower, upper):
+        self.environment['reset_conditions']['initial_positions'] = [ np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper),np.random.uniform(lower,upper) ]
+        self._pub.publish(self.get_trajectory_message(self.environment['reset_conditions']['initial_positions']))
 
-        # leave rotation target same since in scara we do not have rotation of the end-effector
-        ee_rot_tgt = EE_ROT_TGT
-        target1 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_random1, ee_rot_tgt).T)
-        target2 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_random2, ee_rot_tgt).T)
+    def randomizeTargetPose(self, obj_name):
+        EE_POS_TGT = np.asmatrix([[round(np.random.uniform(-0.62713, -0.29082), 5), round(np.random.uniform(-0.15654, 0.15925), 5), 0.72466]])
 
-        # self.realgoal = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_random1, ee_rot_tgt).T)
+        roll = 0.0
+        pitch = 0.0
+        yaw = np.random.uniform(-1.57, 1.57)
+        q = quat.from_euler_angles(roll, pitch, yaw)
+        EE_ROT_TGT = rot_matrix = quat.as_rotation_matrix(q)
+        self.target_orientation = EE_ROT_TGT
 
-        self.realgoal = target1 if np.random.uniform() < 0.5 else target2
-        print("randomizeTarget realgoal: ", self.realgoal)
-
-    def randomizeTarget(self):
-        print("calling randomize target")
-
-        EE_POS_TGT_1 = np.asmatrix([-0.189383, -0.123176, 0.894476]) # point 1
-        EE_POS_TGT_2 = np.asmatrix([-0.359236, 0.0297278, 0.760402]) # point 2
-        EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         EE_POINTS = np.asmatrix([[0, 0, 0]])
 
-        ee_pos_tgt_1 = EE_POS_TGT_1
-        ee_pos_tgt_2 = EE_POS_TGT_2
+        ee_tgt = np.ndarray.flatten(get_ee_points(EE_POINTS, EE_POS_TGT, EE_ROT_TGT).T)
+        self.realgoal = ee_tgt
 
-        # leave rotation target same since in scara we do not have rotation of the end-effector
-        ee_rot_tgt = EE_ROT_TGT
+        ms = ModelState()
+        ms.pose.position.x = EE_POS_TGT[0,0]
+        ms.pose.position.y = EE_POS_TGT[0,1]
+        ms.pose.position.z = EE_POS_TGT[0,2]
+        ms.pose.orientation.x = q.x
+        ms.pose.orientation.y = q.y
+        ms.pose.orientation.z = q.z
+        ms.pose.orientation.w = q.w
 
-        # Initialize target end effector position
-        # ee_tgt = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt, ee_rot_tgt).T)
+        self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
 
-        target1 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_1, ee_rot_tgt).T)
-        target2 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_2, ee_rot_tgt).T)
-
-
-        """
-        This is for initial test only, we need to change this in the future to be more realistic.
-        E.g. covered target -> go to other target. This could be implemented for example with vision.
-        """
-        self.realgoal = target1 if np.random.uniform() < 0.5 else target2
-        print("randomizeTarget realgoal: ", self.realgoal)
-
-    def randomizeMultipleTargets(self):
-        print("calling randomize multiple target")
-
-        EE_POS_TGT_1 = np.asmatrix([0.3325683, 0.0657366, 0.2868]) # center of O
-        EE_POS_TGT_2 = np.asmatrix([0.3305805, -0.1326121, 0.2868]) # center of the H
-        EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        EE_POINTS = np.asmatrix([[0, 0, 0]])
-
-        ee_pos_tgt_1 = EE_POS_TGT_1
-        ee_pos_tgt_2 = EE_POS_TGT_2
-
-        # leave rotation target same since in scara we do not have rotation of the end-effector
-        ee_rot_tgt = EE_ROT_TGT
-
-        # Initialize target end effector position
-        # ee_tgt = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt, ee_rot_tgt).T)
-
-        target1 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_1, ee_rot_tgt).T)
-        target2 = np.ndarray.flatten(get_ee_points(EE_POINTS, ee_pos_tgt_2, ee_rot_tgt).T)
-
-
-        """
-        This is for initial test only, we need to change this in the future to be more realistic.
-        E.g. covered target -> go to other target. This could be implemented for example with vision.
-        """
-        self.realgoal = target1 if np.random.uniform() < 0.5 else target2
-        print("randomizeTarget realgoal: ", self.realgoal)
+        ms.model_name = obj_name
+        rospy.wait_for_service('gazebo/set_model_state')
+        try:
+            self.set_model_pose(ms)
+        except (rospy.ServiceException) as e:
+            print("Error setting the pose of " + obj_name)
 
     def get_trajectory_message(self, action, robot_id=0):
         """
@@ -708,15 +669,22 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         """
         Reset the agent for a particular experiment condition.
         """
-        self._pub_rand_light.publish()
-        self._pub_rand_sky.publish()
-        self._pub_rand_physics.publish()
-        self._pub_rand_obstacles.publish()
+        # self._pub_rand_light.publish()
+        # self._pub_rand_sky.publish()
+        # self._pub_rand_physics.publish()
+        # self._pub_rand_obstacles.publish()
+        # self.randomizeTargetPose("obj")
 
         self.iterator = 0
 
         if self.reset_jnts is True:
             self._pub.publish(self.get_trajectory_message(self.environment['reset_conditions']['initial_positions']))
+
+            # self.randomizeStartPose(-3.13, 3.13)
+            # # Generate a new random start pose until it is not a colliding state
+            # while self._collision_msg is not None:
+            #     self.randomizeStartPose(-3.13, 3.13)
+
             if (self.slowness_unit == 'sec') or (self.slowness_unit is None):
                 time.sleep(int(self.slowness))
             elif(self.slowness_unit == 'nsec'):
