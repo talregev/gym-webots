@@ -20,6 +20,7 @@ from gazebo_msgs.srv import SpawnModel, DeleteModel, SetModelState, SetLinkState
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import WrenchStamped
 from gazebo_msgs.msg import ContactState
+from gazebo_msgs.msg import ModelState, LinkState
 
 from sensor_msgs.msg import CompressedImage
 # ROS Image message -> OpenCV2 image converter
@@ -40,7 +41,6 @@ from PyKDL import Jacobian, Chain, ChainJntToJacSolver, JntArray # For KDL Jacob
 import cv2
 
 import quaternion as quat
-
 
 # from custom baselines repository
 from baselines.agent.utility.general_utils import forward_kinematics, get_ee_points, rotation_from_matrix, \
@@ -136,6 +136,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         RAND_LIGHT_PUBLISHER = '/randomizers/randomizer/light'
         RAND_SKY_PUBLISHER = '/randomizers/randomizer/sky'
         RAND_PHYSICS_PUBLISHER = '/randomizers/randomizer/physics'
+        LINK_STATE_PUBLISHER = '/gazebo/set_link_state'
         RAND_OBSTACLES_PUBLISHER = '/randomizers/randomizer/obstacles'
 
         # joint names:
@@ -212,7 +213,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # ROS 1 implementation
         self._pub = rospy.Publisher(JOINT_PUBLISHER, JointTrajectory)
         self._sub = rospy.Subscriber(JOINT_SUBSCRIBER, JointTrajectoryControllerState, self.observation_callback)
-
         self._sub_coll = rospy.Subscriber('/gazebo_contacts',ContactState, self.collision_callback)
 
         self._pub_rand_light = rospy.Publisher(RAND_LIGHT_PUBLISHER, stdEmpty)
@@ -324,6 +324,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         Callback method for the subscriber of Collision data
         """
         self._collision_msg = None
+        # if message.collision1_name is not message.collision2_name:
+        #     if "objs" not in message.collision1_name and "obj" not in message.collision2_name:
+        #         if "obj" not in message.collision1_name or "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
+        #             if "robot::motor6_link::motor6_link_fixed_joint_lump__robotiq_arg2f_base_link_collision_1" not in message.collision1_name and  "robot::left_outer_finger::left_outer_finger_collision" not in message.collision2_name:
+        #                 self._collision_msg =  message
+
         if message.collision1_name is not message.collision2_name:
             if "obj" not in message.collision1_name and "obj" not in message.collision2_name:
                 if "obj" not in message.collision1_name and "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
@@ -345,6 +351,77 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             print("slowness: ", self.slowness)
             print("slowness_unit: ", self.slowness_unit, "type of variable: ", type(slowness_unit))
             print("reset joints: ", self.reset_jnts, "type of variable: ", type(self.reset_jnts))
+
+    def random_texture(self):
+        material_path = self.envs_path + "/assets/urdf/Media/materials/scripts/textures.material"
+        m = open(material_path,'r')
+        textures = []
+
+        for t in m:
+            if t.startswith("material "):
+                textures.append(t[9:-1])
+
+        rand_texture = np.random.choice(textures)
+        return rand_texture, textures
+
+    def randomizeTexture(self, current_obj_name):
+        f = open(self.obj_path,'r+')
+        model_xml = f.read()
+        f.seek(0)
+
+        new_texture, list_textures = self.random_texture()
+        for lt in list_textures:
+            if lt != str(new_texture):
+                model_xml = model_xml.replace(lt, new_texture)
+
+        f.truncate()
+        f.write(model_xml)
+        f.close()
+        self.randomizeObjectType(current_obj_name=current_obj_name, replace=self.obj_path)
+
+    def randomizeObjectType(self, current_obj_name=None, list_obj=None, replace=None):
+        obj = ModelState()
+        rospy.wait_for_service('gazebo/get_model_state')
+        try:
+            obj = self.get_model_state("target", '')
+        except rospy.ServiceException as e:
+            print("Error getting the model state")
+
+        rospy.wait_for_service('/gazebo/delete_model')
+        try:
+            self.remove_model(current_obj_name)
+        except rospy.ServiceException as e:
+            print("Error removing model")
+
+        if replace is None:
+            random_obj = np.random.choice(list_obj)
+        else:
+            random_obj = replace
+
+        obj_file = open(random_obj, mode='r')
+        model_xml = obj_file.read()
+        obj_file.close()
+
+        if random_obj.endswith('.sdf'):
+            rospy.wait_for_service('/gazebo/spawn_sdf_model')
+            try:
+                self.add_model_sdf(model_name=current_obj_name,
+                                    model_xml=model_xml,
+                                    robot_namespace="",
+                                    initial_pose=obj.pose,
+                                    reference_frame="world")
+            except rospy.ServiceException as e:
+                print("Error adding sdf")
+        else:
+            rospy.wait_for_service('/gazebo/spawn_urdf_model')
+            try:
+                self.add_model_urdf(model_name=current_obj_name,
+                                    model_xml=model_xml,
+                                    robot_namespace="",
+                                    initial_pose=obj.pose,
+                                    reference_frame="world")
+            except rospy.ServiceException as e:
+                print("Error adding urdf")
 
     def randomizeStartPose(self, lower, upper):
         self.environment['reset_conditions']['initial_positions'] = [ np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper),np.random.uniform(lower,upper) ]
@@ -418,7 +495,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         """
         if not message:
             print("Message is empty");
-            # return None
         else:
             # # Check if joint values are in the expected order and size.
             if message.joint_names != agent['joint_order']:
@@ -674,6 +750,11 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_physics.publish()
         # self._pub_rand_obstacles.publish()
         # self.randomizeTargetPose("obj")
+        # self.randomizeTexture("obj")
+        # common_path = self.envs_path + "/assets/urdf/objs/"
+        # path_list = [common_path + "rubik_cube/rubik_cube_random.sdf", common_path + "rubik_cube/rubik_cube.sdf",
+        #             common_path + "box.sdf", common_path + "red_point.urdf"]
+        # self.randomizeObjectType("obj", path_list)
 
         self.iterator = 0
 
