@@ -2,6 +2,7 @@ import gym
 import rospy
 import roslaunch
 import time
+import os
 import numpy as np
 from gym import utils, spaces
 from gym_gazebo.envs import gazebo_env
