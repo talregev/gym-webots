@@ -114,8 +114,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # EE_ROT_TGT = np.asmatrix([[-0.99521107,  0.09689605, -0.01288708],
         #                           [-0.09768035, -0.99077857,  0.09389558],
         #                           [-0.00367013,  0.09470474,  0.99549864]])
-        # EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        EE_ROT_TGT = np.asmatrix([[0.79660969, -0.51571238,  0.31536287], [0.51531424,  0.85207952,  0.09171542], [-0.31601302,  0.08944959,  0.94452874]]) # original orientation
+        EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        # EE_ROT_TGT = np.asmatrix([[0.79660969, -0.51571238,  0.31536287], [0.51531424,  0.85207952,  0.09171542], [-0.31601302,  0.08944959,  0.94452874]]) # original orientation
         EE_POINTS = np.asmatrix([[0, 0, 0]])
         EE_VELOCITIES = np.asmatrix([[0, 0, 0]])
         # Initial joint position
@@ -677,7 +677,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # print("\ncollision detected: ", self._collision_msg)
             # print("Collision detected")
             collided = True
-            self.reward = (self.reward_dist + self.reward_orient) * 4.0
+            self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
 
             # Resets the state of the environment and returns an initial observation.
@@ -697,16 +697,23 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # here is the distance block
             if abs(self.reward_dist) < 0.01:
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
-                print("Reward is: ", self.reward)
+                print("Reward dist is: ", self.reward)
+                if abs(self.reward_orient)<0.01:
+                    self.reward = 1 + self.reward + self.reward_orient
+                    print("Reward dist + orient is: ", self.reward)
+                else:
+                    self.reward = self.reward + self.reward_orient
+                    print("Reward dist+(orient>0.01) is: ", self.reward)
+
             else:
                 self.reward = self.reward_dist
 
-        done = bool((abs(self.reward_dist) < 0.005) or (self.iterator>self.max_episode_steps))
+        done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
 
         # Return the corresponding observations, rewards, etc.
         # TODO, understand better what's the last object to return
-        return self.ob, self.reward, done, collided, {}
-        # return self.ob, self.reward, done, {}
+        # return self.ob, self.reward, done, collided, {}
+        return self.ob, self.reward, done, {}
 
 
     def goToInit(self):
