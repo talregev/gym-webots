@@ -299,8 +299,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
         # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube_random.sdf'
         # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube.sdf'
-        # self.obj_path = self.envs_path + '/assets/urdf/objs/box.sdf'
-        # # self.obj_path = self.envs_path + '/assets/urdf/objs/red_point.urdf'
+        # self.obj_path = self.envs_path + '/assets/urdf/objs/box.sdf' #0.067 0.067 0.067
+        # # self.obj_path = self.envs_path + '/assets/urdf/objs/cylinder.sdf' # radius = 0.03 length = 0.08
+        # # self.obj_path = self.envs_path + '/assets/urdf/objs/sphere.urdf' #radius = 0.033
         # file_sdf = open(self.obj_path ,mode='r')
         # model_sdf = file_sdf.read()
         # file_sdf.close()
@@ -345,12 +346,73 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self._observation_msg =  message
 
     def init_time(self, slowness =1, slowness_unit='sec', reset_jnts=True):
-            self.slowness = slowness
-            self.slowness_unit = slowness_unit
-            self.reset_jnts = reset_jnts
-            print("slowness: ", self.slowness)
-            print("slowness_unit: ", self.slowness_unit, "type of variable: ", type(slowness_unit))
-            print("reset joints: ", self.reset_jnts, "type of variable: ", type(self.reset_jnts))
+        self.slowness = slowness
+        self.slowness_unit = slowness_unit
+        self.reset_jnts = reset_jnts
+        print("slowness: ", self.slowness)
+        print("slowness_unit: ", self.slowness_unit, "type of variable: ", type(slowness_unit))
+        print("reset joints: ", self.reset_jnts, "type of variable: ", type(self.reset_jnts))
+
+    def getModelFile(self, path):
+        if path.endswith('.sdf'):
+            return "sdf"
+        elif path.endswith('.urdf'):
+            return "urdf"
+        else:
+            raise TypeError('the file must be .sdf or .urdf')
+
+    def randomizeSize(self, current_obj_name, shape):
+        f = open(self.obj_path,'r+')
+        model_xml = f.read()
+        f.seek(0)
+
+        min_size = 0.03
+        max_size = 0.1
+
+        if shape != 'box' and shape != 'cylinder' and shape != 'sphere':
+            raise TypeError("Shape must be 'box', 'cylinder' or 'sphere'")
+
+        if shape == "box":
+            size_x = str( round( np.random.uniform(min_size, max_size), 3 ) )
+            size_y = str( round( np.random.uniform(min_size, max_size), 3 ) )
+            size_z = str( round( np.random.uniform(min_size, max_size), 3 ) )
+            # height position of the wooden part of the table + height of the obj
+            z = 0.69525 + float(size_z) / 2
+        else:
+            radius = str( round( np.random.uniform(min_size, max_size/2), 3 ) )
+            z = 0.69525 + float(radius)
+            if shape == "cylinder":
+                length = str( round( np.random.uniform(min_size, max_size), 3 ) )
+                z = 0.69525 + float(length) / 2
+
+        model_file = self.getModelFile(self.obj_path)
+        if model_file == "sdf":
+            if shape == "box":
+                to_replace = model_xml[model_xml.find('<size>')+len('<size>'):model_xml.find('</size>')]
+                model_xml = model_xml.replace(to_replace, size_x + ' ' + size_y + ' ' + size_z)
+            else:
+                to_replace = model_xml[model_xml.find('<radius>')+len('<radius>'):model_xml.find('</radius>')]
+                model_xml = model_xml.replace(to_replace, radius)
+                if shape == "cylinder":
+                    to_replace = model_xml[model_xml.find('<length>')+len('<length>'):model_xml.find('</length>')]
+                    model_xml = model_xml.replace(to_replace, length)
+
+        else:
+            if shape == "box":
+                to_replace = model_xml[model_xml.find('<box ')+len('<box '):model_xml.find('/>')]
+                model_xml = model_xml.replace(to_replace, 'size=' + '"' + size_x + ' ' + size_y + ' ' + size_z + '"')
+            else:
+                to_replace = model_xml[model_xml.find('<sphere ')+len('<sphere '):model_xml.find('/>')]
+                model_xml = model_xml.replace(to_replace, 'radius=' + '"' + radius + '"')
+                if shape == "cylinder":
+                    to_replace = model_xml[model_xml.find('<cylinder ')+len('<cylinder '):model_xml.find('/>')]
+                    model_xml = model_xml.replace(to_replace, 'length=' + '"' + length + '" ' + 'radius=' + '"' + radius + '"')
+
+        f.truncate()
+        f.write(model_xml)
+        f.close()
+        self.randomizeObjectType(current_obj_name=current_obj_name, replace=self.obj_path)
+        self.randomizeTargetPose(obj_name=current_obj_name, centerPoint=z)
 
     def random_texture(self):
         material_path = self.envs_path + "/assets/urdf/Media/materials/scripts/textures.material"
@@ -404,7 +466,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         model_xml = obj_file.read()
         obj_file.close()
 
-        if random_obj.endswith('.sdf'):
+        model_file = self.getModelFile(random_obj)
+        if model_file == "sdf":
             rospy.wait_for_service('/gazebo/spawn_sdf_model')
             try:
                 self.add_model_sdf(model_name=current_obj_name,
@@ -429,38 +492,48 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.environment['reset_conditions']['initial_positions'] = [ np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper),np.random.uniform(lower,upper) ]
         self._pub.publish(self.get_trajectory_message(self.environment['reset_conditions']['initial_positions']))
 
-    def randomizeTargetPose(self, obj_name):
-        EE_POS_TGT = np.asmatrix([[round(np.random.uniform(-0.62713, -0.29082), 5), round(np.random.uniform(-0.15654, 0.15925), 5), 0.72466]])
-
-        roll = 0.0
-        pitch = 0.0
-        yaw = np.random.uniform(-1.57, 1.57)
-        q = quat.from_euler_angles(roll, pitch, yaw)
-        EE_ROT_TGT = rot_matrix = quat.as_rotation_matrix(q)
-        self.target_orientation = EE_ROT_TGT
-
-        EE_POINTS = np.asmatrix([[0, 0, 0]])
-
-        ee_tgt = np.ndarray.flatten(get_ee_points(EE_POINTS, EE_POS_TGT, EE_ROT_TGT).T)
-        self.realgoal = ee_tgt
-
+    def randomizeTargetPose(self, obj_name, centerPoint=None):
         ms = ModelState()
-        ms.pose.position.x = EE_POS_TGT[0,0]
-        ms.pose.position.y = EE_POS_TGT[0,1]
-        ms.pose.position.z = EE_POS_TGT[0,2]
-        ms.pose.orientation.x = q.x
-        ms.pose.orientation.y = q.y
-        ms.pose.orientation.z = q.z
-        ms.pose.orientation.w = q.w
+        if centerPoint is None:
+            EE_POS_TGT = np.asmatrix([ round(np.random.uniform(-0.62713, -0.29082), 5), round(np.random.uniform(-0.15654, 0.15925), 5), self.realgoal[2] ])
+
+            roll = 0.0
+            pitch = 0.0
+            yaw = np.random.uniform(-1.57, 1.57)
+            q = quat.from_euler_angles(roll, pitch, yaw)
+            EE_ROT_TGT = rot_matrix = quat.as_rotation_matrix(q)
+            self.target_orientation = EE_ROT_TGT
+            ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'], EE_POS_TGT, EE_ROT_TGT).T)
+
+            ms.pose.position.x = EE_POS_TGT[0,0]
+            ms.pose.position.y = EE_POS_TGT[0,1]
+            ms.pose.position.z = EE_POS_TGT[0,2]
+            ms.pose.orientation.x = q.x
+            ms.pose.orientation.y = q.y
+            ms.pose.orientation.z = q.z
+            ms.pose.orientation.w = q.w
+
+            ms.model_name = obj_name
+            rospy.wait_for_service('gazebo/set_model_state')
+            try:
+                self.set_model_pose(ms)
+            except (rospy.ServiceException) as e:
+                print("Error setting the pose of " + obj_name)
+
+        else:
+            EE_POS_TGT = np.asmatrix([self.realgoal[0], self.realgoal[1], centerPoint])
+            ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'], EE_POS_TGT, self.target_orientation).T)
+
+            ms.pose.position.x = EE_POS_TGT[0,0]
+            ms.pose.position.y = EE_POS_TGT[0,1]
+            ms.pose.position.z = EE_POS_TGT[0,2]
+            ms.pose.orientation.x = 0;
+            ms.pose.orientation.y= 0;
+            ms.pose.orientation.z = 0;
+            ms.pose.orientation.w = 0;
 
         self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
-
-        ms.model_name = obj_name
-        rospy.wait_for_service('gazebo/set_model_state')
-        try:
-            self.set_model_pose(ms)
-        except (rospy.ServiceException) as e:
-            print("Error setting the pose of " + obj_name)
+        self.realgoal = ee_tgt
 
     def get_trajectory_message(self, action, robot_id=0):
         """
@@ -753,10 +826,11 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_obstacles.publish()
         # self.randomizeTargetPose("obj")
         # self.randomizeTexture("obj")
+        # self.randomizeSize("obj", "box")
 
         # common_path = self.envs_path + "/assets/urdf/objs/"
         # path_list = [common_path + "rubik_cube/rubik_cube_random.sdf", common_path + "rubik_cube/rubik_cube.sdf",
-        #             common_path + "box.sdf", common_path + "red_point.urdf"]
+        #             common_path + "box.sdf", common_path + "cylinder.sdf", common_path + "sphere.urdf"]
         # for pl in path_list:
         #     if pl == self.obj_path:
         #         path_list.remove(pl)

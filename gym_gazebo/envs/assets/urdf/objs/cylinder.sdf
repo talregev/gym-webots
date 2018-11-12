@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.5">
+  <model name="cylinder">
+    <pose>0 0 0 0 0 0</pose>
+    <link name="link_cylinder">
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>1.0</mass>
+      </inertial>
+      <collision name="collision_cylinder">
+        <geometry>
+          <cylinder>
+            <radius>0.03</radius>
+            <length>0.08</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual_cylinder">
+        <transparency>0.6</transparency>
+        <geometry>
+          <cylinder>
+            <radius>0.03</radius>
+            <length>0.08</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.5 1 0 1</ambient>
+          <diffuse>0.5 1 0 1</diffuse>
+          <script>
+            <uri>model://Media/materials/scripts</uri>
+            <uri>model://Media/materials/textures</uri>
+            <name>Perlin</name>
+          </script>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

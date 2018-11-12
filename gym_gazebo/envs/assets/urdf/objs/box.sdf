@@ -1,4 +1,4 @@
-<?xml version='1.0'encoding="UTF-8"?>
+<?xml version='1.0' encoding="UTF-8"?>
 <sdf version="1.5">
   <model name="box">
     <pose>0 0 0 0 0 0</pose>
@@ -24,6 +24,7 @@
         </geometry>
       </collision>
       <visual name="visual_box">
+        <transparency>0</transparency>
         <geometry>
           <box>
             <size>0.067 0.067 0.067</size>
