@@ -326,7 +326,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         """
         self._collision_msg = None
         # if message.collision1_name is not message.collision2_name:
-        #     if "objs" not in message.collision1_name and "obj" not in message.collision2_name:
+        #     if "obj" not in message.collision1_name and "obj" not in message.collision2_name:
         #         if "obj" not in message.collision1_name or "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
         #             if "robot::motor6_link::motor6_link_fixed_joint_lump__robotiq_arg2f_base_link_collision_1" not in message.collision1_name and  "robot::left_outer_finger::left_outer_finger_collision" not in message.collision2_name:
         #                 self._collision_msg =  message
@@ -336,8 +336,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 if "obj" not in message.collision1_name and "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
                     if "robot::motor6_link::motor6_link_fixed_joint_lump__robotiq_arg2f_base_link_collision_1" not in message.collision1_name and  "robot::left_outer_finger::left_outer_finger_collision" not in message.collision2_name:
                         if "obstacle" not in message.collision1_name and "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
-                            if "obstacle" not in message.collision1_name and "obj" not in "message.collision2_name":
-                                self._collision_msg =  message
+                            if "obstacle" not in message.collision1_name and "obj" not in message.collision2_name:
+                                self._collision_msg = message
 
     def observation_callback(self, message):
         """
@@ -735,8 +735,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         """
         self.iterator+=1
 
-        # if not collided:
-        #     # Execute "action"
         self._pub.publish(self.get_trajectory_message(action[:self.scara_chain.getNrOfJoints()]))
 
         # # Take an observation
@@ -747,16 +745,18 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
         self.reward_dist = -self.rmse_func(self.ob[self.scara_chain.getNrOfJoints():(self.scara_chain.getNrOfJoints()+3)])
         # careful we have degrees now so we scale with
-        orientation_scale = 0.1
-        self.reward_orient = - orientation_scale * self.rmse_func(self.ob[self.scara_chain.getNrOfJoints()+3:(self.scara_chain.getNrOfJoints()+6)])
+        # orientation_scale = 0.1
+        # self.reward_orient = - orientation_scale * self.rmse_func(self.ob[self.scara_chain.getNrOfJoints()+3:(self.scara_chain.getNrOfJoints()+6)])
         #scale here the orientation because it should not be the main bias of the reward, position should be
-        collided = False
 
         if self._collision_msg is not None and self._collision_msg.collision1_name and self._collision_msg.collision2_name:
-            # print("\ncollision detected: ", self._collision_msg)
+            print("\ncollision detected: ", self._collision_msg)
+            print("**************************************")
+            print("\ncollision detected: ", self._collision_msg.collision1_name)
+            print("\ncollision detected: ", self._collision_msg.collision2_name)
             # print("Collision detected")
-            collided = True
-            self.reward = (self.reward_dist + self.reward_orient) * 6.0
+            self.reward = self.reward_dist * 8.0
+            # self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
 
             # Resets the state of the environment and returns an initial observation.
@@ -764,6 +764,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             rospy.wait_for_service('/gazebo/reset_simulation')
             try:
                 self.reset_proxy()
+                print("RESET")
+                time.sleep(2)
                 # go to the previous state before colliding
                 # self._pub.publish(self.get_trajectory_message(action[:self.scara_chain.getNrOfJoints()]))
             except (rospy.ServiceException) as e:
@@ -777,21 +779,21 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             if abs(self.reward_dist) < 0.01:
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 print("Reward dist is: ", self.reward)
-                if abs(self.reward_orient)<0.01:
-                    self.reward = 1 + self.reward + self.reward_orient
-                    print("Reward dist + orient is: ", self.reward)
-                else:
-                    self.reward = self.reward + self.reward_orient
-                    print("Reward dist+(orient>0.01) is: ", self.reward)
+                # if abs(self.reward_orient)<0.01:
+                #     self.reward = 1 + self.reward + self.reward_orient
+                #     print("Reward dist + orient is: ", self.reward)
+                # else:
+                #     self.reward = self.reward + self.reward_orient
+                #     print("Reward dist+(orient>0.01) is: ", self.reward)
 
             else:
                 self.reward = self.reward_dist
 
-        done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
+        # done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
+        done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
 
         # Return the corresponding observations, rewards, etc.
         # TODO, understand better what's the last object to return
-        # return self.ob, self.reward, done, collided, {}
         return self.ob, self.reward, done, {}
 
     def goToInit(self):
