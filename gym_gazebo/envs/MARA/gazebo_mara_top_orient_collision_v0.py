@@ -749,12 +749,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self.reward_orient = - orientation_scale * self.rmse_func(self.ob[self.scara_chain.getNrOfJoints()+3:(self.scara_chain.getNrOfJoints()+6)])
         #scale here the orientation because it should not be the main bias of the reward, position should be
 
-        if self._collision_msg is not None and self._collision_msg.collision1_name and self._collision_msg.collision2_name:
-            print("\ncollision detected: ", self._collision_msg)
-            print("**************************************")
-            print("collision1_name: ", self._collision_msg.collision1_name)
-            print("collision2_name: ", self._collision_msg.collision2_name)
-            # print("Collision detected")
+        if self._collision_msg is not None:
+            if self._collision_msg.collision1_name is None:
+                raise AttributeError("collision1_name is None")
+            if self._collision_msg.collision2_name is None:
+                raise AttributeError("collision2_name is None")
+
             self.reward = self.reward_dist * 8.0
             # self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
@@ -764,8 +764,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             rospy.wait_for_service('/gazebo/reset_simulation')
             try:
                 self.reset_proxy()
-                print("RESET")
-                time.sleep(2)
+                # print("RESET")
+                # time.sleep(2)
                 # go to the previous state before colliding
                 # self._pub.publish(self.get_trajectory_message(action[:self.scara_chain.getNrOfJoints()]))
             except (rospy.ServiceException) as e:
