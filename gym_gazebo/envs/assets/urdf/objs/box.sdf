@@ -4,6 +4,7 @@
     <pose>0 0 0 0 0 0</pose>
     <!-- <static>true</static> -->
     <link name="link_box">
+      <!-- <gravity>0</gravity> -->
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <mass>10.0</mass>

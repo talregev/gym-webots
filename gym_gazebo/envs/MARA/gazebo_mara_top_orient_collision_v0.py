@@ -99,6 +99,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # target, where should the agent reach
 
         EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466]) # alex2
+        # EE_POS_TGT = np.asmatrix([-0.173762, -0.0124312, 1.60415]) # for testing collision_callback
         # EE_POS_TGT = np.asmatrix([-0.580238, -0.179591, 0.72466]) # rubik touching the bar
         # EE_ROT_TGT = np.asmatrix([[-0.00128296,  0.9999805 ,  0.00611158],
         #                            [ 0.00231397, -0.0061086 ,  0.99997867],
@@ -331,13 +332,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         #             if "robot::motor6_link::motor6_link_fixed_joint_lump__robotiq_arg2f_base_link_collision_1" not in message.collision1_name and  "robot::left_outer_finger::left_outer_finger_collision" not in message.collision2_name:
         #                 self._collision_msg =  message
 
-        if message.collision1_name is not message.collision2_name:
-            if "obj" not in message.collision1_name and "obj" not in message.collision2_name:
-                if "obj" not in message.collision1_name and "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
-                    if "robot::motor6_link::motor6_link_fixed_joint_lump__robotiq_arg2f_base_link_collision_1" not in message.collision1_name and  "robot::left_outer_finger::left_outer_finger_collision" not in message.collision2_name:
-                        if "obstacle" not in message.collision1_name and "robot::table::table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
-                            if "obstacle" not in message.collision1_name and "obj" not in message.collision2_name:
-                                self._collision_msg = message
+        if message.collision1_name != message.collision2_name:
+            # neither obj nor obstacle colliding with table
+            if "obj::" not in message.collision1_name and "obstacle" not in message.collision1_name or "table_fixed_joint_lump__mara_work_area_link_collision_4" not in message.collision2_name:
+                # neither obj colliding with obstacle and vice-versa nor objs colliding each other nor obstacles colliding each other
+                if "obj::" not in (message.collision1_name and message.collision2_name) and "obstacle" not in (message.collision1_name and message.collision2_name):
+                    self._collision_msg = message
 
     def observation_callback(self, message):
         """
@@ -754,6 +754,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 raise AttributeError("collision1_name is None")
             if self._collision_msg.collision2_name is None:
                 raise AttributeError("collision2_name is None")
+            # print(self._collision_msg.collision1_name)
+            # print(self._collision_msg.collision2_name)
 
             self.reward = self.reward_dist * 8.0
             # self.reward = (self.reward_dist + self.reward_orient) * 6.0
