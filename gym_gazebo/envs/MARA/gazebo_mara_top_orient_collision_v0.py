@@ -258,7 +258,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         high = np.pi * np.ones(self.scara_chain.getNrOfJoints())
         # low = -np.inf * np.ones(self.scara_chain.getNrOfJoints())
         # high = np.inf * np.ones(self.scara_chain.getNrOfJoints())
-        # print("Action spaces: ", low, high)
         self.action_space = spaces.Box(low, high, dtype=np.float32)
         high = np.inf*np.ones(self.obs_dim)
         low = -high
@@ -280,7 +279,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         pose.orientation.y= 0;
         pose.orientation.z = 0;
         pose.orientation.w = 0;
-        reference_frame = ""
+        reference_frame = "world"
 
         self.envs_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -292,9 +291,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         try:
             self.add_model_urdf(model_name="target",
                                 model_xml=model_xml,
-                                robot_namespace="",
+                                robot_namespace=robot_namespace,
                                 initial_pose=pose,
-                                reference_frame="world")
+                                reference_frame=reference_frame)
         except rospy.ServiceException as e:
             print('Error adding urdf model')
 
@@ -313,9 +312,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         #     # self.add_model_urdf(model_name="obj",
         #     self.add_model_sdf(model_name="obj",
         #                         model_xml=model_sdf,
-        #                         robot_namespace="",
+        #                         robot_namespace=robot_namespace,
         #                         initial_pose=pose,
-        #                         reference_frame="world")
+        #                         reference_frame=reference_frame)
         # except rospy.ServiceException as e:
         #     print('Error adding sdf model')
 
@@ -353,7 +352,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         print("slowness_unit: ", self.slowness_unit, "type of variable: ", type(slowness_unit))
         print("reset joints: ", self.reset_jnts, "type of variable: ", type(self.reset_jnts))
 
-    def getModelFile(self, path):
+    def getModelFileType(self, path):
         if path.endswith('.sdf'):
             return "sdf"
         elif path.endswith('.urdf'):
@@ -385,7 +384,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 length = str( round( np.random.uniform(min_size, max_size), 3 ) )
                 z = 0.69525 + float(length) / 2
 
-        model_file = self.getModelFile(self.obj_path)
+        model_file = self.getModelFileType(self.obj_path)
         if model_file == "sdf":
             if shape == "box":
                 to_replace = model_xml[model_xml.find('<size>')+len('<size>'):model_xml.find('</size>')]
@@ -466,7 +465,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         model_xml = obj_file.read()
         obj_file.close()
 
-        model_file = self.getModelFile(random_obj)
+        model_file = self.getModelFileType(random_obj)
         if model_file == "sdf":
             rospy.wait_for_service('/gazebo/spawn_sdf_model')
             try:
