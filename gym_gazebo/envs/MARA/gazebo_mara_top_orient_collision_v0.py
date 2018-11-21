@@ -83,8 +83,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.reward_dist = None
         self.reward_ctrl = None
         self.action_space = None
-        self.max_episode_steps = 1000 # now used in all algorithms
+        self.max_episode_steps = 1000 # now used in all algorithms, this should reflect the lstm step size, otherwqise it restarts two times
         self.iterator = 0
+        self.reset_iter = 0
         # default to seconds
         self.slowness = 1
         self.slowness_unit = 'sec'
@@ -209,7 +210,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         }
 
         # self.spec = {'timestep_limit': 5, 'reward_threshold':  950.0,}
-
         # Subscribe to the appropriate topics, taking into account the particular robot
         # ROS 1 implementation
         self._pub = rospy.Publisher(JOINT_PUBLISHER, JointTrajectory)
@@ -744,8 +744,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
         self.reward_dist = -self.rmse_func(self.ob[self.scara_chain.getNrOfJoints():(self.scara_chain.getNrOfJoints()+3)])
         # careful we have degrees now so we scale with
-        # orientation_scale = 0.1
-        # self.reward_orient = - orientation_scale * self.rmse_func(self.ob[self.scara_chain.getNrOfJoints()+3:(self.scara_chain.getNrOfJoints()+6)])
+        orientation_scale = 0.1
+        self.reward_orient = - orientation_scale * self.rmse_func(self.ob[self.scara_chain.getNrOfJoints()+3:(self.scara_chain.getNrOfJoints()+6)])
         #scale here the orientation because it should not be the main bias of the reward, position should be
 
         if self._collision_msg is not None:
@@ -756,7 +756,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # print(self._collision_msg.collision1_name)
             # print(self._collision_msg.collision2_name)
 
-            self.reward = self.reward_dist * 8.0
+            self.reward = (self.reward_dist + self.reward_orient) * 8.0
             # self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
 
@@ -767,8 +767,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 self.reset_proxy()
                 # print("RESET")
                 # time.sleep(2)
-                # go to the previous state before colliding
-                # self._pub.publish(self.get_trajectory_message(action[:self.scara_chain.getNrOfJoints()]))
             except (rospy.ServiceException) as e:
                 print ("/gazebo/reset_simulation service call failed")
                 # self.goToInit()
@@ -780,18 +778,18 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             if abs(self.reward_dist) < 0.01:
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 print("Reward dist is: ", self.reward)
-                # if abs(self.reward_orient)<0.01:
-                #     self.reward = 1 + self.reward + self.reward_orient
-                #     print("Reward dist + orient is: ", self.reward)
-                # else:
-                #     self.reward = self.reward + self.reward_orient
-                #     print("Reward dist+(orient>0.01) is: ", self.reward)
+                if abs(self.reward_orient)<0.01:
+                    self.reward = 10*(1 + self.reward + self.reward_orient)
+                    print("Reward dist + orient is: ", self.reward)
+                else:
+                    self.reward = self.reward + self.reward_orient
+                    print("Reward dist+(orient>0.01) is: ", self.reward)
 
             else:
                 self.reward = self.reward_dist
 
-        # done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
-        done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
+        done = bool((abs(self.reward_dist) < 0.005) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.005) )
+        # done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
 
         # Return the corresponding observations, rewards, etc.
         # TODO, understand better what's the last object to return
@@ -828,7 +826,13 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_sky.publish()
         # self._pub_rand_physics.publish()
         # self._pub_rand_obstacles.publish()
-        # self.randomizeTargetPose("obj")
+        # if the
+        print("goal is before randomize: ", self.realgoal)
+        if self.reset_iter is 100:
+            print("resseting the iter and randomize target: ", self.reset_iter)
+            self.reset_iter = 0
+            self.randomizeTargetPose("target")
+            print("self.reset_iter after reset: ", self.reset_iter)
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
 
@@ -861,6 +865,10 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.ob = self.take_observation()
         while(self.ob is None):
             self.ob = self.take_observation()
+
+        print("goal is after randomize: ", self.realgoal)
+
+        self.reset_iter +=1
 
         # Return the corresponding observation
         return self.ob
