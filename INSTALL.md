@@ -73,8 +73,10 @@ sudo pip install -e .
 ```
 
 #### Run bash files, build the ros workspace:
+```
 cd gym-gazebo/gym_gazebo/envs/installation
 bash setup_melodic.bash
+```
 
 #### Execution examples
 ##### Run example for qlearn:
