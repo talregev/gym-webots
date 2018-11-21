@@ -491,9 +491,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.environment['reset_conditions']['initial_positions'] = [ np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper),np.random.uniform(lower,upper) ]
         self._pub.publish(self.get_trajectory_message(self.environment['reset_conditions']['initial_positions']))
 
-    def randomizeTargetPose(self, obj_name, centerPoint=None):
+    def randomizeTargetPose(self, obj_name, centerPoint=False):
         ms = ModelState()
-        if centerPoint is None:
+        if not centerPoint:
             EE_POS_TGT = np.asmatrix([ round(np.random.uniform(-0.62713, -0.29082), 5), round(np.random.uniform(-0.15654, 0.15925), 5), self.realgoal[2] ])
 
             roll = 0.0
@@ -512,12 +512,13 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             ms.pose.orientation.z = q.z
             ms.pose.orientation.w = q.w
 
-            ms.model_name = obj_name
-            rospy.wait_for_service('gazebo/set_model_state')
-            try:
-                self.set_model_pose(ms)
-            except (rospy.ServiceException) as e:
-                print("Error setting the pose of " + obj_name)
+            if obj_name != "target":
+                ms.model_name = obj_name
+                rospy.wait_for_service('gazebo/set_model_state')
+                try:
+                    self.set_model_pose(ms)
+                except (rospy.ServiceException) as e:
+                    print("Error setting the pose of " + obj_name)
 
         else:
             EE_POS_TGT = np.asmatrix([self.realgoal[0], self.realgoal[1], centerPoint])
