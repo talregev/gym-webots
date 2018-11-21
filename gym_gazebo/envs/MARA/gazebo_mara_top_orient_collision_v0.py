@@ -440,6 +440,33 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         f.close()
         self.randomizeObjectType(current_obj_name=current_obj_name, replace=self.obj_path)
 
+    def spawnModel(self, obj_name, obj_path, pose):
+        model_file = self.getModelFileType(obj_path)
+        obj_file = open(obj_path, mode='r')
+        xml = obj_file.read()
+        obj_file.close()
+
+        if model_file == "sdf":
+            rospy.wait_for_service('/gazebo/spawn_sdf_model')
+            try:
+                self.add_model_sdf(model_name=obj_name,
+                                    model_xml=xml,
+                                    robot_namespace="",
+                                    initial_pose=pose,
+                                    reference_frame="world")
+            except rospy.ServiceException as e:
+                print("Error adding sdf")
+        else:
+            rospy.wait_for_service('/gazebo/spawn_urdf_model')
+            try:
+                self.add_model_urdf(model_name=obj_name,
+                                    model_xml=xml,
+                                    robot_namespace="",
+                                    initial_pose=pose,
+                                    reference_frame="world")
+            except rospy.ServiceException as e:
+                print("Error adding urdf")
+
     def randomizeObjectType(self, current_obj_name=None, list_obj=None, replace=None):
         obj = ModelState()
 
@@ -461,31 +488,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         else:
             random_obj = replace
 
-        obj_file = open(random_obj, mode='r')
-        model_xml = obj_file.read()
-        obj_file.close()
-
-        model_file = self.getModelFileType(random_obj)
-        if model_file == "sdf":
-            rospy.wait_for_service('/gazebo/spawn_sdf_model')
-            try:
-                self.add_model_sdf(model_name=current_obj_name,
-                                    model_xml=model_xml,
-                                    robot_namespace="",
-                                    initial_pose=obj.pose,
-                                    reference_frame="world")
-            except rospy.ServiceException as e:
-                print("Error adding sdf")
-        else:
-            rospy.wait_for_service('/gazebo/spawn_urdf_model')
-            try:
-                self.add_model_urdf(model_name=current_obj_name,
-                                    model_xml=model_xml,
-                                    robot_namespace="",
-                                    initial_pose=obj.pose,
-                                    reference_frame="world")
-            except rospy.ServiceException as e:
-                print("Error adding urdf")
+        self.spawnModel(current_obj_name, random_obj, obj.pose)
 
     def randomizeStartPose(self, lower, upper):
         self.environment['reset_conditions']['initial_positions'] = [ np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper), np.random.uniform(lower,upper),np.random.uniform(lower,upper),np.random.uniform(lower,upper) ]
@@ -513,12 +516,21 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             ms.pose.orientation.w = q.w
 
             if obj_name != "target":
-                ms.model_name = obj_name
-                rospy.wait_for_service('gazebo/set_model_state')
+
+                # ms.model_name = obj_name
+                # rospy.wait_for_service('gazebo/set_model_state')
+                # try:
+                #     self.set_model_pose(ms)
+                # except (rospy.ServiceException) as e:
+                #     print("Error setting the pose of " + obj_name)
+
+                rospy.wait_for_service('/gazebo/delete_model')
                 try:
-                    self.set_model_pose(ms)
-                except (rospy.ServiceException) as e:
-                    print("Error setting the pose of " + obj_name)
+                    self.remove_model(obj_name)
+                except rospy.ServiceException as e:
+                    print("Error removing model")
+
+                self.spawnModel(obj_name, self.obj_path, ms.pose)
 
         else:
             EE_POS_TGT = np.asmatrix([self.realgoal[0], self.realgoal[1], centerPoint])
@@ -532,7 +544,27 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             ms.pose.orientation.z = 0;
             ms.pose.orientation.w = 0;
 
-        self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
+        # self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
+
+        file_xml = open(self.envs_path + '/assets/urdf/target/point.urdf' ,mode='r')
+        model_sdf = file_xml.read()
+        file_xml.close()
+        rospy.wait_for_service('/gazebo/delete_model')
+        try:
+            self.remove_model("target")
+        except rospy.ServiceException as e:
+            print("Error removing model")
+
+        rospy.wait_for_service('/gazebo/spawn_urdf_model')
+        try:
+            self.add_model_urdf(model_name="target",
+                                model_xml=model_sdf,
+                                robot_namespace="",
+                                initial_pose=ms.pose,
+                                reference_frame="world")
+        except rospy.ServiceException as e:
+            print('Error adding urdf model')
+
         self.realgoal = ee_tgt
 
     def get_trajectory_message(self, action, robot_id=0):
