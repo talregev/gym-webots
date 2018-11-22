@@ -812,7 +812,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 print("Reward dist is: ", self.reward)
                 if abs(self.reward_orient)<0.01:
-                    self.reward = 10*(1 + self.reward + self.reward_orient)
+                    self.reward = 5 + self.reward + self.reward_orient
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
@@ -860,12 +860,14 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_physics.publish()
         # self._pub_rand_obstacles.publish()
         # if the
-        print("goal is before randomize: ", self.realgoal)
-        if self.reset_iter is 100:
+
+        if self.reset_iter is 400:
+            print("goal is before randomize: ", self.realgoal)
             print("resseting the iter and randomize target: ", self.reset_iter)
             self.reset_iter = 0
             self.randomizeTargetPose("target")
             print("self.reset_iter after reset: ", self.reset_iter)
+            print("goal is after randomize: ", self.realgoal)
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
 
@@ -899,7 +901,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         while(self.ob is None):
             self.ob = self.take_observation()
 
-        print("goal is after randomize: ", self.realgoal)
+
 
         self.reset_iter +=1
 
