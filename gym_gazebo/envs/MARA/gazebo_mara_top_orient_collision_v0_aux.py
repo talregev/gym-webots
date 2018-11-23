@@ -35,16 +35,14 @@ from control_msgs.msg import JointTrajectoryControllerState
 from baselines.agent.scara_arm.tree_urdf import treeFromFile # For KDL Jacobians
 from PyKDL import Jacobian, Chain, ChainJntToJacSolver, JntArray # For KDL Jacobians
 
-
 from gazebo_msgs.msg import ModelState
-
 
 from gazebo_msgs.srv import SpawnModel, DeleteModel, SetModelState, SetLinkState, GetModelState
 
 import cv2
 
 import quaternion as quat
-
+import os
 
 # from custom baselines repository
 from baselines.agent.utility.general_utils import forward_kinematics, get_ee_points, rotation_from_matrix, \
@@ -322,6 +320,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # Seed the environment
         # Seed the environment
         self._seed()
+
+        self.assets_path = os.path.abspath(os.path.join(rospkg.RosPack().get_path("gazebo_domain_randomizer"), os.pardir)) + "/assets"
+
     # def collision_callback(self, message):
     #     """
     #     Callback method for the subscriber of Collision data
@@ -349,7 +350,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
        except rospy.ServiceException as e:
            print("Error removing model")
 
-       obj_file = open("/home/rkojcev/devel/ros_rl/environments/gym-gazebo/gym_gazebo/envs/assets/urdf/target/point.urdf", mode='r')
+       obj_file = open(self.assets_path + "/models/urdf/target_point.urdf", mode='r')
        model_xml = obj_file.read()
        obj_file.close()
 

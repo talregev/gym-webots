@@ -281,9 +281,9 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         pose.orientation.w = 0;
         reference_frame = "world"
 
-        self.envs_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.assets_path = os.path.abspath(os.path.join(rospkg.RosPack().get_path("gazebo_domain_randomizer"), os.pardir)) + "/assets"
 
-        file_xml = open(self.envs_path + '/assets/urdf/target/point.urdf' ,mode='r')
+        file_xml = open(self.assets_path + '/models/urdf/target_point.urdf' ,mode='r')
         model_xml = file_xml.read()
         file_xml.close()
 
@@ -297,26 +297,26 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         except rospy.ServiceException as e:
             print('Error adding urdf model')
 
-        # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube_random.sdf'
-        # # self.obj_path = self.envs_path + '/assets/urdf/objs/rubik_cube/rubik_cube.sdf'
-        # self.obj_path = self.envs_path + '/assets/urdf/objs/box.sdf' #0.067 0.067 0.067
-        # # self.obj_path = self.envs_path + '/assets/urdf/objs/cylinder.sdf' # radius = 0.03 length = 0.08
-        # # self.obj_path = self.envs_path + '/assets/urdf/objs/sphere.urdf' #radius = 0.033
-        # file_sdf = open(self.obj_path ,mode='r')
-        # model_sdf = file_sdf.read()
-        # file_sdf.close()
-        #
-        # rospy.wait_for_service('/gazebo/spawn_sdf_model')
-        # # rospy.wait_for_service('/gazebo/spawn_urdf_model')
-        # try:
-        #     # self.add_model_urdf(model_name="obj",
-        #     self.add_model_sdf(model_name="obj",
-        #                         model_xml=model_sdf,
-        #                         robot_namespace=robot_namespace,
-        #                         initial_pose=pose,
-        #                         reference_frame=reference_frame)
-        # except rospy.ServiceException as e:
-        #     print('Error adding sdf model')
+        # self.obj_path = self.assets_path + '/models/sdf/rubik_cube_random.sdf'
+        # self.obj_path = self.assets_path + '/models/sdf/rubik_cube.sdf'
+        self.obj_path = self.assets_path + '/models/sdf/box.sdf' #0.067 0.067 0.067
+        # self.obj_path = self.assets_path + '/models/sdf/cylinder.sdf' # radius = 0.03 length = 0.08
+        # self.obj_path = self.assets_path + '/models/urdf/sphere.urdf' #radius = 0.033
+        file_sdf = open(self.obj_path ,mode='r')
+        model_sdf = file_sdf.read()
+        file_sdf.close()
+
+        rospy.wait_for_service('/gazebo/spawn_sdf_model')
+        # rospy.wait_for_service('/gazebo/spawn_urdf_model')
+        try:
+            # self.add_model_urdf(model_name="obj",
+            self.add_model_sdf(model_name="obj",
+                                model_xml=model_sdf,
+                                robot_namespace=robot_namespace,
+                                initial_pose=pose,
+                                reference_frame=reference_frame)
+        except rospy.ServiceException as e:
+            print('Error adding sdf model')
 
         self._seed()
 
@@ -414,7 +414,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.randomizeTargetPose(obj_name=current_obj_name, centerPoint=z)
 
     def random_texture(self):
-        material_path = self.envs_path + "/assets/urdf/Media/materials/scripts/textures.material"
+        material_path = self.assets_path + "/media/materials/scripts/textures.material"
         m = open(material_path,'r')
         textures = []
 
@@ -546,7 +546,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
         # self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
 
-        file_xml = open(self.envs_path + '/assets/urdf/target/point.urdf' ,mode='r')
+        file_xml = open(self.assets_path + '/models/urdf/target_point.urdf' ,mode='r')
         model_sdf = file_xml.read()
         file_xml.close()
         rospy.wait_for_service('/gazebo/delete_model')
@@ -859,7 +859,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_sky.publish()
         # self._pub_rand_physics.publish()
         # self._pub_rand_obstacles.publish()
-        # if the
 
         if self.reset_iter is 300:
             print("goal is before randomize: ", self.realgoal)
@@ -871,9 +870,10 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
 
-        # common_path = self.envs_path + "/assets/urdf/objs/"
-        # path_list = [common_path + "rubik_cube/rubik_cube_random.sdf", common_path + "rubik_cube/rubik_cube.sdf",
-        #             common_path + "box.sdf", common_path + "cylinder.sdf", common_path + "sphere.urdf"]
+        # common_path = self.assets_path + "/models/"
+        # path_list = [common_path + "sdf/rubik_cube_random.sdf", common_path + "sdf/rubik_cube.sdf",
+        #             common_path + "sdf/box.sdf", common_path + "/sdf/cylinder.sdf",
+        #             common_path + "urdf/sphere.urdf"]
         # for pl in path_list:
         #     if pl == self.obj_path:
         #         path_list.remove(pl)
@@ -900,8 +900,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.ob = self.take_observation()
         while(self.ob is None):
             self.ob = self.take_observation()
-
-
 
         self.reset_iter +=1
 
