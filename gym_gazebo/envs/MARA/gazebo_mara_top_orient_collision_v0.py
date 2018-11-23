@@ -861,7 +861,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_obstacles.publish()
         # if the
 
-        if self.reset_iter is 400:
+        if self.reset_iter is 300:
             print("goal is before randomize: ", self.realgoal)
             print("resseting the iter and randomize target: ", self.reset_iter)
             self.reset_iter = 0
