@@ -84,6 +84,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.reward_ctrl = None
         self.action_space = None
         self.max_episode_steps = 1000 # now used in all algorithms, this should reflect the lstm step size, otherwqise it restarts two times
+        self.rand_target_thresh = 300
         self.iterator = 0
         self.reset_iter = 0
         # default to seconds
@@ -99,7 +100,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         #############################
         # target, where should the agent reach
 
-        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466]) # alex2
+        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615-0.1, 0.72466+0.1]) # alex2
         # EE_POS_TGT = np.asmatrix([-0.173762, -0.0124312, 1.60415]) # for testing collision_callback
         # EE_POS_TGT = np.asmatrix([-0.580238, -0.179591, 0.72466]) # rubik touching the bar
         # EE_ROT_TGT = np.asmatrix([[-0.00128296,  0.9999805 ,  0.00611158],
@@ -297,26 +298,26 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         except rospy.ServiceException as e:
             print('Error adding urdf model')
 
-        # self.obj_path = self.assets_path + '/models/sdf/rubik_cube_random.sdf'
-        # self.obj_path = self.assets_path + '/models/sdf/rubik_cube.sdf'
-        self.obj_path = self.assets_path + '/models/sdf/box.sdf' #0.067 0.067 0.067
-        # self.obj_path = self.assets_path + '/models/sdf/cylinder.sdf' # radius = 0.03 length = 0.08
-        # self.obj_path = self.assets_path + '/models/urdf/sphere.urdf' #radius = 0.033
-        file_sdf = open(self.obj_path ,mode='r')
-        model_sdf = file_sdf.read()
-        file_sdf.close()
-
-        rospy.wait_for_service('/gazebo/spawn_sdf_model')
-        # rospy.wait_for_service('/gazebo/spawn_urdf_model')
-        try:
-            # self.add_model_urdf(model_name="obj",
-            self.add_model_sdf(model_name="obj",
-                                model_xml=model_sdf,
-                                robot_namespace=robot_namespace,
-                                initial_pose=pose,
-                                reference_frame=reference_frame)
-        except rospy.ServiceException as e:
-            print('Error adding sdf model')
+        # # self.obj_path = self.assets_path + '/models/sdf/rubik_cube_random.sdf'
+        # # self.obj_path = self.assets_path + '/models/sdf/rubik_cube.sdf'
+        # self.obj_path = self.assets_path + '/models/sdf/box.sdf' #0.067 0.067 0.067
+        # # self.obj_path = self.assets_path + '/models/sdf/cylinder.sdf' # radius = 0.03 length = 0.08
+        # # self.obj_path = self.assets_path + '/models/urdf/sphere.urdf' #radius = 0.033
+        # file_sdf = open(self.obj_path ,mode='r')
+        # model_sdf = file_sdf.read()
+        # file_sdf.close()
+        #
+        # rospy.wait_for_service('/gazebo/spawn_sdf_model')
+        # # rospy.wait_for_service('/gazebo/spawn_urdf_model')
+        # try:
+        #     # self.add_model_urdf(model_name="obj",
+        #     self.add_model_sdf(model_name="obj",
+        #                         model_xml=model_sdf,
+        #                         robot_namespace=robot_namespace,
+        #                         initial_pose=pose,
+        #                         reference_frame=reference_frame)
+        # except rospy.ServiceException as e:
+        #     print('Error adding sdf model')
 
         self._seed()
 
@@ -860,7 +861,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_physics.publish()
         # self._pub_rand_obstacles.publish()
 
-        if self.reset_iter is 300:
+        if self.reset_iter > self.rand_target_thresh:
             print("goal is before randomize: ", self.realgoal)
             print("resseting the iter and randomize target: ", self.reset_iter)
             self.reset_iter = 0
@@ -869,6 +870,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             print("goal is after randomize: ", self.realgoal)
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
+        print("self.reset_iter after reset: ", self.reset_iter)
 
         # common_path = self.assets_path + "/models/"
         # path_list = [common_path + "sdf/rubik_cube_random.sdf", common_path + "sdf/rubik_cube.sdf",
