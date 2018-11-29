@@ -100,7 +100,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         #############################
         # target, where should the agent reach
 
-        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615-0.1, 0.72466+0.1]) # alex2
+        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466]) # alex2
         # EE_POS_TGT = np.asmatrix([-0.173762, -0.0124312, 1.60415]) # for testing collision_callback
         # EE_POS_TGT = np.asmatrix([-0.580238, -0.179591, 0.72466]) # rubik touching the bar
         # EE_ROT_TGT = np.asmatrix([[-0.00128296,  0.9999805 ,  0.00611158],
@@ -812,12 +812,13 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             if abs(self.reward_dist) < 0.01:
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 print("Reward dist is: ", self.reward)
+                self.reset_iter += 1
                 if abs(self.reward_orient)<0.01:
                     self.reward = 5 + self.reward + self.reward_orient
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
-                    print("Reward dist+(orient>0.01) is: ", self.reward)
+                    print("Reward dist+(orient=>0.01) is: ", self.reward)
 
             else:
                 self.reward = self.reward_dist
@@ -862,15 +863,16 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_obstacles.publish()
 
         if self.reset_iter > self.rand_target_thresh:
-            print("goal is before randomize: ", self.realgoal)
-            print("resseting the iter and randomize target: ", self.reset_iter)
+            # print("goal is before randomize: ", self.realgoal)
+            # print("resseting the iter and randomize target: ", self.reset_iter)
             self.reset_iter = 0
             self.randomizeTargetPose("target")
-            print("self.reset_iter after reset: ", self.reset_iter)
-            print("goal is after randomize: ", self.realgoal)
+            # print("self.reset_iter after reset: ", self.reset_iter)
+            with open("/tmp/rosrl/targets.txt", 'a') as out:
+                out.write( str(self.realgoal) + '\n' )
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
-        print("self.reset_iter after reset: ", self.reset_iter)
+        # print("self.reset_iter after reset: ", self.reset_iter)
 
         # common_path = self.assets_path + "/models/"
         # path_list = [common_path + "sdf/rubik_cube_random.sdf", common_path + "sdf/rubik_cube.sdf",
@@ -903,7 +905,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         while(self.ob is None):
             self.ob = self.take_observation()
 
-        self.reset_iter +=1
+        # self.reset_iter +=1
 
         # Return the corresponding observation
         return self.ob
