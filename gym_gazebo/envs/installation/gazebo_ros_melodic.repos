@@ -1,12 +1,8 @@
 repositories:
   ar_track_alvar:
     type: git
-    url: https://github.com/sniekum/ar_track_alvar
-    version: melodic-devel
-  ar_track_alvar_msgs:
-    type: git
-    url: https://github.com/sniekum/ar_track_alvar_msgs
-    version: melodic-devel
+    url: https://github.com/ros-perception/ar_track_alvar
+    version: melodic-devel`
   catkin_simple:
     type: git
     url: https://github.com/catkin/catkin_simple.git
@@ -61,7 +57,7 @@ repositories:
     version: indigo
   kobuki_desktop:
     type: git
-    url: https://github.com/erlerobot/kobuki_desktop
+    url: https://github.com/yujinrobot/kobuki_desktop
     version: devel
   kobuki_msgs:
     type: git
