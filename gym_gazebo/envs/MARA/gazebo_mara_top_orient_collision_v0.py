@@ -506,7 +506,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             pitch = 0.0
             yaw = np.random.uniform(-1.57, 1.57)
             q = quat.from_euler_angles(roll, pitch, yaw)
-            EE_ROT_TGT = rot_matrix = quat.as_rotation_matrix(q)
+            EE_ROT_TGT = quat.as_rotation_matrix(q)
             self.target_orientation = EE_ROT_TGT
             ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'], EE_POS_TGT, EE_ROT_TGT).T)
 
@@ -519,19 +519,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             ms.pose.orientation.w = q.w
 
             if obj_name != "target":
-
-                # ms.model_name = obj_name
-                # rospy.wait_for_service('gazebo/set_model_state')
-                # try:
-                #     self.set_model_pose(ms)
-                # except (rospy.ServiceException) as e:
-                #     print("Error setting the pose of " + obj_name)
-
-                rospy.wait_for_service('/gazebo/delete_model')
+                ms.model_name = obj_name
+                rospy.wait_for_service('gazebo/set_model_state')
                 try:
-                    self.remove_model(obj_name)
-                except rospy.ServiceException as e:
-                    print("Error removing model")
+                    self.set_model_pose(ms)
+                except (rospy.ServiceException) as e:
+                    print("Error setting the pose of " + obj_name)
 
                 self.spawnModel(obj_name, self.obj_path, ms.pose)
 
@@ -547,27 +540,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             ms.pose.orientation.z = 0;
             ms.pose.orientation.w = 0;
 
-        # self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
-
-        file_xml = open(self.assets_path + '/models/urdf/target_point.urdf' ,mode='r')
-        model_sdf = file_xml.read()
-        file_xml.close()
-        rospy.wait_for_service('/gazebo/delete_model')
-        try:
-            self.remove_model("target")
-        except rospy.ServiceException as e:
-            print("Error removing model")
-
-        rospy.wait_for_service('/gazebo/spawn_urdf_model')
-        try:
-            self.add_model_urdf(model_name="target",
-                                model_xml=model_sdf,
-                                robot_namespace="",
-                                initial_pose=ms.pose,
-                                reference_frame="world")
-        except rospy.ServiceException as e:
-            print('Error adding urdf model')
-
+        self._pub_link_state.publish( LinkState(link_name="target_link", pose=ms.pose, reference_frame="world") )
         self.realgoal = ee_tgt
 
     def get_trajectory_message(self, action, robot_id=0):
@@ -801,6 +774,22 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             rospy.wait_for_service('/gazebo/reset_simulation')
             try:
                 self.reset_proxy()
+<<<<<<< HEAD
+=======
+
+                pose = Pose()
+                pose.position.x = self.realgoal[0];
+                pose.position.y = self.realgoal[1];
+                pose.position.z = self.realgoal[2];
+                pose.orientation.x = 0;
+                pose.orientation.y= 0;
+                pose.orientation.z = 0;
+                pose.orientation.w = 0;
+                self._pub_link_state.publish( LinkState(link_name="target_link", pose=pose, reference_frame="world") )
+
+                # print("RESET")
+                # time.sleep(2)
+>>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
             except (rospy.ServiceException) as e:
                 print ("/gazebo/reset_simulation service call failed")
 
@@ -811,12 +800,18 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 self.reset_iter +=1
                 print("Reward dist is: ", self.reward)
+<<<<<<< HEAD
                 if abs(self.reward_orient)<0.005:
                     self.reward = (2 + self.reward + self.reward_orient)*2
+=======
+                self.reset_iter += 1
+                if abs(self.reward_orient)<0.01:
+                    self.reward = 5 + self.reward + self.reward_orient
+>>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
-                    print("Reward dist+(orient>0.01) is: ", self.reward)
+                    print("Reward dist+(orient=>0.01) is: ", self.reward)
 
             else:
                 self.reward = self.reward_dist
@@ -866,7 +861,12 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             self.reset_iter = 0
             self.randomizeTargetPose("target")
             # print("self.reset_iter after reset: ", self.reset_iter)
+<<<<<<< HEAD
             print("goal is after randomize: ", self.realgoal)
+=======
+            with open("/tmp/rosrl/targets.txt", 'a') as out:
+                out.write( str(self.realgoal) + '\n' )
+>>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
         # print("self.reset_iter after reset: ", self.reset_iter)
