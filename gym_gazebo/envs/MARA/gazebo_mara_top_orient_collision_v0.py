@@ -774,8 +774,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             rospy.wait_for_service('/gazebo/reset_simulation')
             try:
                 self.reset_proxy()
-<<<<<<< HEAD
-=======
 
                 pose = Pose()
                 pose.position.x = self.realgoal[0];
@@ -789,7 +787,6 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
 
                 # print("RESET")
                 # time.sleep(2)
->>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
             except (rospy.ServiceException) as e:
                 print ("/gazebo/reset_simulation service call failed")
 
@@ -800,14 +797,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 self.reset_iter +=1
                 print("Reward dist is: ", self.reward)
-<<<<<<< HEAD
                 if abs(self.reward_orient)<0.005:
                     self.reward = (2 + self.reward + self.reward_orient)*2
-=======
-                self.reset_iter += 1
-                if abs(self.reward_orient)<0.01:
-                    self.reward = 5 + self.reward + self.reward_orient
->>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
@@ -861,12 +852,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             self.reset_iter = 0
             self.randomizeTargetPose("target")
             # print("self.reset_iter after reset: ", self.reset_iter)
-<<<<<<< HEAD
-            print("goal is after randomize: ", self.realgoal)
-=======
             with open("/tmp/rosrl/targets.txt", 'a') as out:
                 out.write( str(self.realgoal) + '\n' )
->>>>>>> 6942b1f2b9a5dab03ec34826cb85abc973e85498
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
         # print("self.reset_iter after reset: ", self.reset_iter)
