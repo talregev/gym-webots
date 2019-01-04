@@ -42,6 +42,8 @@ import cv2
 
 import quaternion as quat
 
+import write_csv as csv_file
+
 # from custom baselines repository
 from baselines.agent.utility.general_utils import forward_kinematics, get_ee_points, rotation_from_matrix, \
     get_rotation_matrix,quaternion_from_matrix # For getting points and velocities.
@@ -84,7 +86,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         self.reward_ctrl = None
         self.action_space = None
         self.max_episode_steps = 1000 # now used in all algorithms, this should reflect the lstm step size, otherwqise it restarts two times
-        self.rand_target_thresh = 300
+        self.rand_target_thresh = 40
         self.iterator = 0
         self.reset_iter = 0
         # default to seconds
@@ -100,7 +102,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         #############################
         # target, where should the agent reach
 
-        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615-0.1, 0.72466+0.1]) # alex2
+        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466]) # alex2
         # EE_POS_TGT = np.asmatrix([-0.173762, -0.0124312, 1.60415]) # for testing collision_callback
         # EE_POS_TGT = np.asmatrix([-0.580238, -0.179591, 0.72466]) # rubik touching the bar
         # EE_ROT_TGT = np.asmatrix([[-0.00128296,  0.9999805 ,  0.00611158],
@@ -790,7 +792,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # print(self._collision_msg.collision1_name)
             # print(self._collision_msg.collision2_name)
 
-            self.reward = (self.reward_dist + self.reward_orient) * 8.0
+            self.reward = (self.reward_dist + self.reward_orient) * 5.0
             # self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
 
@@ -799,21 +801,18 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             rospy.wait_for_service('/gazebo/reset_simulation')
             try:
                 self.reset_proxy()
-                # print("RESET")
-                # time.sleep(2)
             except (rospy.ServiceException) as e:
                 print ("/gazebo/reset_simulation service call failed")
-                # self.goToInit()
-                # self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_world', Empty)
 
         else:
             # here we want to fetch the positions of the end-effector which are nr_dof:nr_dof+3
             # here is the distance block
-            if abs(self.reward_dist) < 0.01:
+            if abs(self.reward_dist) < 0.005:
                 self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
+                self.reset_iter +=1
                 print("Reward dist is: ", self.reward)
-                if abs(self.reward_orient)<0.01:
-                    self.reward = 5 + self.reward + self.reward_orient
+                if abs(self.reward_orient)<0.005:
+                    self.reward = (2 + self.reward + self.reward_orient)*2
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
@@ -822,7 +821,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             else:
                 self.reward = self.reward_dist
 
-        done = bool((abs(self.reward_dist) < 0.005) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.005) )
+        done = bool((abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) or (abs(self.reward_orient) < 0.001) )
         # done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
 
         # Return the corresponding observations, rewards, etc.
@@ -862,15 +861,15 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self._pub_rand_obstacles.publish()
 
         if self.reset_iter > self.rand_target_thresh:
-            print("goal is before randomize: ", self.realgoal)
-            print("resseting the iter and randomize target: ", self.reset_iter)
+            # print("goal is before randomize: ", self.realgoal)
+            # print("resseting the iter and randomize target: ", self.reset_iter)
             self.reset_iter = 0
             self.randomizeTargetPose("target")
-            print("self.reset_iter after reset: ", self.reset_iter)
+            # print("self.reset_iter after reset: ", self.reset_iter)
             print("goal is after randomize: ", self.realgoal)
         # self.randomizeTexture("obj")
         # self.randomizeSize("obj", "box")
-        print("self.reset_iter after reset: ", self.reset_iter)
+        # print("self.reset_iter after reset: ", self.reset_iter)
 
         # common_path = self.assets_path + "/models/"
         # path_list = [common_path + "sdf/rubik_cube_random.sdf", common_path + "sdf/rubik_cube.sdf",
@@ -903,7 +902,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         while(self.ob is None):
             self.ob = self.take_observation()
 
-        self.reset_iter +=1
+        # self.reset_iter +=1
 
         # Return the corresponding observation
         return self.ob
