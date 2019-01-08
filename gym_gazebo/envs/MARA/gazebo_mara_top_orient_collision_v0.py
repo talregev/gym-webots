@@ -39,9 +39,7 @@ from baselines.agent.scara_arm.tree_urdf import treeFromFile # For KDL Jacobians
 from PyKDL import Jacobian, Chain, ChainJntToJacSolver, JntArray # For KDL Jacobians
 
 import cv2
-
-import quaternion as quat
-
+import transforms3d as tf
 import write_csv as csv_file
 
 # from custom baselines repository
@@ -215,15 +213,15 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         # self.spec = {'timestep_limit': 5, 'reward_threshold':  950.0,}
         # Subscribe to the appropriate topics, taking into account the particular robot
         # ROS 1 implementation
-        self._pub = rospy.Publisher(JOINT_PUBLISHER, JointTrajectory)
+        self._pub = rospy.Publisher(JOINT_PUBLISHER, JointTrajectory, queue_size=1)
         self._sub = rospy.Subscriber(JOINT_SUBSCRIBER, JointTrajectoryControllerState, self.observation_callback)
         self._sub_coll = rospy.Subscriber('/gazebo_contacts',ContactState, self.collision_callback)
 
-        self._pub_rand_light = rospy.Publisher(RAND_LIGHT_PUBLISHER, stdEmpty)
-        self._pub_rand_sky = rospy.Publisher(RAND_SKY_PUBLISHER, stdEmpty)
-        self._pub_rand_physics = rospy.Publisher(RAND_PHYSICS_PUBLISHER, stdEmpty)
-        self._pub_rand_obstacles = rospy.Publisher(RAND_OBSTACLES_PUBLISHER, stdEmpty)
-        self._pub_link_state = rospy.Publisher(LINK_STATE_PUBLISHER, LinkState)
+        # self._pub_rand_light = rospy.Publisher(RAND_LIGHT_PUBLISHER, stdEmpty, queue_size=1)
+        # self._pub_rand_sky = rospy.Publisher(RAND_SKY_PUBLISHER, stdEmpty, queue_size=1)
+        # self._pub_rand_physics = rospy.Publisher(RAND_PHYSICS_PUBLISHER, stdEmpty, queue_size=1)
+        # self._pub_rand_obstacles = rospy.Publisher(RAND_OBSTACLES_PUBLISHER, stdEmpty, queue_size=1)
+        self._pub_link_state = rospy.Publisher(LINK_STATE_PUBLISHER, LinkState, queue_size=1)
 
         # Initialize a tree structure from the robot urdf.
         #   note that the xacro of the urdf is updated by hand.
@@ -505,18 +503,18 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             roll = 0.0
             pitch = 0.0
             yaw = np.random.uniform(-1.57, 1.57)
-            q = quat.from_euler_angles(roll, pitch, yaw)
-            EE_ROT_TGT = quat.as_rotation_matrix(q)
+            q = tf.euler.euler2quat(roll, pitch, yaw)
+            EE_ROT_TGT = tf.quaternions.quat2mat(q)
             self.target_orientation = EE_ROT_TGT
             ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'], EE_POS_TGT, EE_ROT_TGT).T)
 
             ms.pose.position.x = EE_POS_TGT[0,0]
             ms.pose.position.y = EE_POS_TGT[0,1]
             ms.pose.position.z = EE_POS_TGT[0,2]
-            ms.pose.orientation.x = q.x
-            ms.pose.orientation.y = q.y
-            ms.pose.orientation.z = q.z
-            ms.pose.orientation.w = q.w
+            ms.pose.orientation.x = q[1]
+            ms.pose.orientation.y = q[2]
+            ms.pose.orientation.z = q[3]
+            ms.pose.orientation.w = q[0]
 
             if obj_name != "target":
                 ms.model_name = obj_name
@@ -686,21 +684,20 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # # I need this calculations for the new reward function, need to send them back to the run mara or calculate them here
             # current_quaternion = quaternion_from_matrix(rotation_matrix)
             # tgt_quartenion = quaternion_from_matrix(self.target_orientation)
-
-            current_quaternion = quat.from_rotation_matrix(rotation_matrix)
-            tgt_quartenion = quat.from_rotation_matrix(self.target_orientation)
+            current_quaternion = tf.quaternions.mat2quat(rot) #[w, x, y ,z]
+            tgt_quartenion = tf.quaternions.mat2quat(self.target_orientation)
 
             # A  = np.vstack([current_quaternion, np.ones(len(current_quaternion))]).T
             #quat_error = np.linalg.lstsq(A, tgt_quartenion)[0]
 
             quat_error = current_quaternion * tgt_quartenion.conjugate()
-            rot_vec_err = quat.as_rotation_vector(quat_error)
+            rot_vec_err, _ = tf.quaternions.quat2axangle(quat_error)
 
             # convert quat to np arrays
-            quat_error = quat.as_float_array(quat_error)
+            # quat_error = np.asarray(quat_error, dtype=np.quaternion).view((np.double, 4))
 
             # RK:  revisit this later, we only take one angle difference here!
-            angle_diff = 2 * np.arccos(np.clip(quat_error[..., 0], -1., 1.))
+            # angle_diff = 2 * np.arccos(np.clip(quat_error[..., 0], -1., 1.))
 
             current_ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'],
                                                               trans,
@@ -765,7 +762,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # print(self._collision_msg.collision1_name)
             # print(self._collision_msg.collision2_name)
 
-            self.reward = (self.reward_dist + self.reward_orient) * 5.0
+            self.reward = (self.reward_dist + self.reward_orient) * 8.0
             # self.reward = (self.reward_dist + self.reward_orient) * 6.0
             # print("Reward collision is: ", self.reward)
 
@@ -794,11 +791,11 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             # here we want to fetch the positions of the end-effector which are nr_dof:nr_dof+3
             # here is the distance block
             if abs(self.reward_dist) < 0.005:
-                self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
-                self.reset_iter +=1
+                self.reward = 2 + self.reward_dist # Make the reward increase as the distance decreases
+                self.reset_iter += 1
                 print("Reward dist is: ", self.reward)
-                if abs(self.reward_orient)<0.005:
-                    self.reward = (2 + self.reward + self.reward_orient)*2
+                if abs(self.reward_orient) < 0.005:
+                    self.reward = (2 + self.reward + self.reward_orient) * 2
                     print("Reward dist + orient is: ", self.reward)
                 else:
                     self.reward = self.reward + self.reward_orient
