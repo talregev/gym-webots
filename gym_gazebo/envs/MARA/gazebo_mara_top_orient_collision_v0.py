@@ -503,7 +503,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             roll = 0.0
             pitch = 0.0
             yaw = np.random.uniform(-1.57, 1.57)
-            q = tf.euler.euler2quat(roll, pitch, yaw)
+            #tf.taitbryan.euler2quat(z, y, x) --> [w, x, y, z]
+            q = tf.taitbryan.euler2quat(yaw, pitch, roll)
             EE_ROT_TGT = tf.quaternions.quat2mat(q)
             self.target_orientation = EE_ROT_TGT
             ee_tgt = np.ndarray.flatten(get_ee_points(self.environment['end_effector_points'], EE_POS_TGT, EE_ROT_TGT).T)
