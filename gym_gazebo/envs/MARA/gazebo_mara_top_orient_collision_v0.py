@@ -249,7 +249,7 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
         recently also added quaternion to the obs, which has dimension=4
         """
         #
-        self.obs_dim = self.scara_chain.getNrOfJoints() + 9#7 #6 hardcode it for now
+        self.obs_dim = self.scara_chain.getNrOfJoints() + 10#7 #6 hardcode it for now
         # # print(observation, _reward)
 
         # # Here idially we should find the control range of the robot. Unfortunatelly in ROS/KDL there is nothing like this.
@@ -692,7 +692,8 @@ class GazeboMARATopOrientCollisionv0Env(gazebo_env.GazeboEnv):
             #quat_error = np.linalg.lstsq(A, tgt_quartenion)[0]
 
             quat_error = current_quaternion * tgt_quartenion.conjugate()
-            rot_vec_err, _ = tf.quaternions.quat2axangle(quat_error)
+            vec, angle = tf.quaternions.quat2axangle(quat_error)
+            rot_vec_err = [vec[0], vec[1], vec[2], np.float64(angle)]
 
             # convert quat to np arrays
             # quat_error = np.asarray(quat_error, dtype=np.quaternion).view((np.double, 4))
