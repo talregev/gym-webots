@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a report to help us improve.
 title: ''
 labels: bug
 assignees: ''
@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **Robot**
-Name of the robot. Provide a reference if the robot is not officially supported by gym-gazebo
+Name of the robot. Provide a reference if the robot is not officially supported by gym-gazebo.
 
 **Environment/Algorithm**
 Provide a reference to the failing environment and algorithm combination. **Any** if the issue is common to every environment.

@@ -1,8 +1,8 @@
 ---
-name: Feature request
-about: Suggest an idea for gym-gazebo or share your own project.
+name: Advice request
+about: Ask for advice about your personal projects related to gym-gazebo.
 title: ''
-labels: Feature Request
+labels: help wanted
 assignees: ''
 
 ---
