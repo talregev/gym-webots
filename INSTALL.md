@@ -184,6 +184,7 @@ echo "## Sophus installed ##\n"
 #### Gazebo gym
 
 ```bash
+cd 
 git clone https://github.com/erlerobot/gym-gazebo
 cd gym-gazebo
 sudo pip3 install -e .
@@ -261,6 +262,7 @@ sudo apt-get remove .*gazebo.* && sudo apt-get update && sudo apt-get install ga
 #### Gym Gazebo Pip
 
 ```bash
+cd 
 git clone https://github.com/erlerobot/gym-gazebo
 cd gym-gazebo
 sudo pip install -e .
