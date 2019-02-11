@@ -2,7 +2,7 @@
 ## Table of Contents
 - [Installation](#installation)
 	- [Ubuntu 18.04](#ubuntu-1804)
-	- [Ubuntu 16.04](#ubuntu-1604)
+	- [Ubuntu 16.04 (**deprecated**)](#ubuntu-1604)
 	- [Ubuntu 14.04 (**deprecated**)](#ubuntu-1404)
 	- [Docker (**deprecated**)](#docker)
 
