@@ -149,6 +149,8 @@ sudo apt-get install \
 cmake gcc g++ qt4-qmake libqt4-dev \
 libusb-dev libftdi-dev \
 python3-defusedxml python3-vcstool \
+libbluetooth-dev libspnav-dev \
+pyqt4-dev-tools libcwiid-dev \
 ros-kinetic-octomap-msgs        \
 ros-kinetic-joy                 \
 ros-kinetic-geodesy             \
@@ -165,7 +167,8 @@ ros-kinetic-kdl-conversions     \
 ros-kinetic-eigen-conversions   \
 ros-kinetic-tf2-sensor-msgs     \
 ros-kinetic-pcl-ros \
-ros-kinetic-navigation
+ros-kinetic-navigation \
+ros-kinetic-ar-track-alvar-msgs
 ```
 
 ```
