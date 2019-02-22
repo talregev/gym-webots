@@ -92,7 +92,8 @@ class GazeboMARATopCollisionv0Env(gazebo_env.GazeboEnv):
         #############################
         # target, where should the agent reach
 
-        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466]) # alex2
+        EE_POS_TGT = np.asmatrix([-0.40028, 0.095615, 0.72466 + 0.1]) # alex2
+        # EE_POS_TGT = np.asmatrix([-0.386752, -0.000756, 1.40557]) # easy point
         # EE_POS_TGT = np.asmatrix([-0.173762, -0.0124312, 1.60415]) # for testing collision_callback
         # EE_POS_TGT = np.asmatrix([-0.580238, -0.179591, 0.72466]) # rubik touching the bar
         # EE_ROT_TGT = np.asmatrix([[-0.00128296,  0.9999805 ,  0.00611158],
@@ -111,8 +112,8 @@ class GazeboMARATopCollisionv0Env(gazebo_env.GazeboEnv):
         # EE_ROT_TGT = np.asmatrix([[-0.99521107,  0.09689605, -0.01288708],
         #                           [-0.09768035, -0.99077857,  0.09389558],
         #                           [-0.00367013,  0.09470474,  0.99549864]])
-        # EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        EE_ROT_TGT = np.asmatrix([[0.79660969, -0.51571238,  0.31536287], [0.51531424,  0.85207952,  0.09171542], [-0.31601302,  0.08944959,  0.94452874]]) # original orientation
+        EE_ROT_TGT = np.asmatrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        # EE_ROT_TGT = np.asmatrix([[0.79660969, -0.51571238,  0.31536287], [0.51531424,  0.85207952,  0.09171542], [-0.31601302,  0.08944959,  0.94452874]]) # original orientation
         EE_POINTS = np.asmatrix([[0, 0, 0]])
         EE_VELOCITIES = np.asmatrix([[0, 0, 0]])
         # Initial joint position
@@ -239,9 +240,7 @@ class GazeboMARATopCollisionv0Env(gazebo_env.GazeboEnv):
         # # I have tested this with the mujoco enviroment and the output is always same low[-1.,-1.], high[1.,1.]
         # #bounds = self.model.actuator_ctrlrange.copy()
         low = -np.pi * np.ones(self.scara_chain.getNrOfJoints())
-        high = np.pi * np.ones(self.scara_chain.getNrOfJoints())
-        # low = -np.inf * np.ones(self.scara_chain.getNrOfJoints())
-        # high = np.inf * np.ones(self.scara_chain.getNrOfJoints())
+        high = -low
         self.action_space = spaces.Box(low, high, dtype=np.float32)
         high = np.inf*np.ones(self.obs_dim)
         low = -high
@@ -520,7 +519,7 @@ class GazeboMARATopCollisionv0Env(gazebo_env.GazeboEnv):
             if self._collision_msg.collision2_name is None:
                 raise AttributeError("collision2_name is None")
 
-            self.reward = self.reward_dist * 8.0
+            self.reward = self.reward_dist * 2.0
 
             # Resets the state of the environment and returns an initial observation.
             # we should avoid this --> huge bottleneck
@@ -545,13 +544,12 @@ class GazeboMARATopCollisionv0Env(gazebo_env.GazeboEnv):
             # here we want to fetch the positions of the end-effector which are nr_dof:nr_dof+3
             # here is the distance block
             if abs(self.reward_dist) < 0.005:
-                self.reward = 2 + self.reward_dist # Make the reward increase as the distance decreases
+                self.reward = 1 + self.reward_dist # Make the reward increase as the distance decreases
                 print("Reward dist is: ", self.reward)
             else:
                 self.reward = self.reward_dist
 
-        done = bool( (abs(self.reward_dist) < 0.001) or (self.iterator>self.max_episode_steps) )
-        # done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
+        done = bool( (abs(self.reward_dist) < 0.005) or (self.iterator > self.max_episode_steps) )
 
         # Return the corresponding observations, rewards, etc.
         # TODO, understand better what's the last object to return
