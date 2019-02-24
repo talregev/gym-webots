@@ -16,7 +16,7 @@ import json
 import random
 import numpy as np
 from keras.models import Sequential, load_model
-from keras.initializations import normal
+from keras.initializers import normal
 from keras import optimizers
 from keras.optimizers import RMSprop
 from keras.layers import Convolution2D, Flatten, ZeroPadding2D
@@ -27,6 +27,8 @@ from keras.layers.pooling import MaxPooling2D
 from keras.regularizers import l2
 from keras.optimizers import SGD , Adam
 import memory
+from keras import backend as K
+K.set_image_dim_ordering('th')
 
 class DeepQ:
     """
@@ -61,10 +63,10 @@ class DeepQ:
     def createModel(self):
         # Network structure must be directly changed here.
         model = Sequential()
-        model.add(Convolution2D(16, 3, 3, subsample=(2,2), input_shape=(img_channels,img_rows,img_cols)))
+        model.add(Convolution2D(16, (3,3), strides=(2,2), input_shape=(img_channels,img_rows,img_cols)))
         model.add(Activation('relu'))
         model.add(ZeroPadding2D((1, 1)))
-        model.add(Convolution2D(16, 3, 3, subsample=(2,2)))
+        model.add(Convolution2D(16, (3,3), strides=(2,2)))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
         model.add(Flatten())
