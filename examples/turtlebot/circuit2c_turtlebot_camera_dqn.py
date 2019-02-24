@@ -63,10 +63,10 @@ class DeepQ:
     def createModel(self):
         # Network structure must be directly changed here.
         model = Sequential()
-        model.add(Convolution2D(16, 3, 3, subsample=(2,2), input_shape=(img_channels,img_rows,img_cols)))
+        model.add(Convolution2D(16, (3,3), strides=(2,2), input_shape=(img_channels,img_rows,img_cols)))
         model.add(Activation('relu'))
         model.add(ZeroPadding2D((1, 1)))
-        model.add(Convolution2D(16, 3, 3, subsample=(2,2)))
+        model.add(Convolution2D(16, (3,3), strides=(2,2)))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
         model.add(Flatten())
