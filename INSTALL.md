@@ -468,7 +468,7 @@ xvfb-run -s "-screen 0 1400x900x24" bash
 
 If you have an equivalent release of Gazebo installed locally, you can connect to the gzserver inside the container using gzclient GUI by setting the address of the master URI to the containers public address.
 ```
-export GAZEBO_MASTER_IP=$(sudo docker inspect --format '{{ .NetworkSettings.IPAddress }}' "id of running container")
+export GAZEBO_ID=`docker ps | grep gym-gazebo | awk '{print $1}'`
+export GAZEBO_MASTER_IP=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $GAZEBO_ID)
 export GAZEBO_MASTER_URI=$GAZEBO_MASTER_IP:11345
-gzclient
 ```
