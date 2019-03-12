@@ -27,8 +27,13 @@ from keras.layers.pooling import MaxPooling2D
 from keras.regularizers import l2
 from keras.optimizers import SGD , Adam
 import memory
-from keras import backend as K
-K.set_image_data_format('channels_first')
+
+import keras
+from keras import backend, layers, models, utils
+from keras.models import Model
+backend.set_image_data_format('channels_last')
+
+from keras_applications.vgg16 import VGG16
 import re
 
 class DeepQ:
@@ -66,17 +71,25 @@ class DeepQ:
 
     def createModel(self):
         # Network structure must be directly changed here.
-        model = Sequential()
-        model.add(Convolution2D(16, (3,3), strides=(2,2), input_shape=(self.img_channels, self.img_rows, self.img_cols)))
-        model.add(Activation('relu'))
-        model.add(ZeroPadding2D((1, 1)))
-        model.add(Convolution2D(16, (3,3), strides=(2,2)))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
-        model.add(Flatten())
-        model.add(Dense(256))
-        model.add(Activation('relu'))
-        model.add(Dense(network_outputs))
+        base_model = VGG16(backend=backend, layers=layers, models=models, utils=utils, weights='imagenet', include_top=False, input_shape=(self.img_rows, self.img_cols, self.img_channels))
+
+        for layer in base_model.layers:
+            layer.trainable = False
+
+        x = base_model.output
+
+        # flat: passing it to a dense layer
+        x = Flatten()(x)
+        # 1st Dense Layer
+        x = Dense(4096, activation='relu', name='fc1')(x)
+        # 2st Dense Layer
+        x = Dense(4096, activation='relu', name='fc2')(x)
+
+        # Output Layer
+        x = Dense(network_outputs)(x)
+
+        model = Model(base_model.input, x)
+
         #adam = Adam(lr=self.learningRate)
         #model.compile(loss='mse',optimizer=adam)
         model.compile(RMSprop(lr=self.learningRate), 'MSE')
@@ -88,7 +101,7 @@ class DeepQ:
         i = 0
         for layer in self.model.layers:
             weights = layer.get_weights()
-            print ("layer ",i,": ",weights)
+            print("layer ",i,": ",weights)
             i += 1
 
     def backupNetwork(self, model, backup):
@@ -199,7 +212,7 @@ class DeepQ:
                 if isFinal:
                     X_batch = np.append(X_batch, newState.copy(), axis=0)
                     Y_batch = np.append(Y_batch, np.array([[reward]*self.output_size]), axis=0)
-            self.model.fit(X_batch, Y_batch, validation_split=0.2, batch_size = len(miniBatch), epochs=1, verbose = 0)
+            self.model.fit(X_batch, Y_batch, validation_split=0.2, batch_size = len(miniBatch), nb_epoch=1, verbose = 0)
 
     def saveModel(self, path):
         self.model.save(path)
@@ -211,8 +224,6 @@ def detect_monitor_files(training_dir):
     return [os.path.join(training_dir, f) for f in os.listdir(training_dir) if f.startswith('openaigym')]
 
 def clear_monitor_files(training_dir):
-    if not os.path.isdir(training_dir):
-        os.makedirs(training_dir)
     files = detect_monitor_files(training_dir)
     if len(files) == 0:
         return
@@ -221,13 +232,13 @@ def clear_monitor_files(training_dir):
 
 if __name__ == '__main__':
 
-    # REMEMBER!: turtlebot_cnn_setup.bash must be executed.
-    env = gym.make('GazeboCircuit2cTurtlebotCameraNnEnv-v0')
+    #REMEMBER!: turtlebot_cnn_setup.bash must be executed.
+    env = gym.make('GazeboCircuit2cTurtlebotCameraCnnEnv-v0')
 
     # Parameters:
     outdir = '/tmp/gazebo_gym_experiments/'
     SAVE_PREFIX_PATH = '/home/tal/deep/data/gym-gazebo'
-    SAVE_PREFIX_NAME = 'turtle_c2c_dqn'
+    SAVE_PREFIX_NAME = 'turtle_dqn_vgg16_100_100_3ch'
     epochs = 100000
     steps = 1000
 

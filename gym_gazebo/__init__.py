@@ -34,6 +34,11 @@ register(
     # More arguments here
 )
 register(
+    id='GazeboCircuit2cTurtlebotCameraCnnEnv-v0',
+    entry_point='gym_gazebo.envs.turtlebot:GazeboCircuit2cTurtlebotCameraCnnEnv',
+    # More arguments here
+)
+register(
     id='GazeboRoundTurtlebotLidar-v0',
     entry_point='gym_gazebo.envs.turtlebot:GazeboRoundTurtlebotLidarEnv',
     # More arguments here
