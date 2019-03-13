@@ -242,9 +242,12 @@ if __name__ == '__main__':
     epochs = 100000
     steps = 1000
 
-    epochs_list = []
     if not os.path.isdir(SAVE_PREFIX_PATH):
         os.makedirs()
+    if not os.path.isdir(outdir):
+        os.makedirs()
+
+    epochs_list = []
     _, _, files = next(os.walk(SAVE_PREFIX_PATH))
     for file in files:
         if file.startswith(SAVE_PREFIX_NAME + '_ep'):

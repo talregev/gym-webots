@@ -211,8 +211,6 @@ def detect_monitor_files(training_dir):
     return [os.path.join(training_dir, f) for f in os.listdir(training_dir) if f.startswith('openaigym')]
 
 def clear_monitor_files(training_dir):
-    if not os.path.isdir(training_dir):
-        os.makedirs(training_dir)
     files = detect_monitor_files(training_dir)
     if len(files) == 0:
         return
@@ -231,9 +229,12 @@ if __name__ == '__main__':
     epochs = 100000
     steps = 1000
 
-    epochs_list = []
     if not os.path.isdir(SAVE_PREFIX_PATH):
         os.makedirs()
+    if not os.path.isdir(outdir):
+        os.makedirs()
+
+    epochs_list = []
     _, _, files = next(os.walk(SAVE_PREFIX_PATH))
     for file in files:
         if file.startswith(SAVE_PREFIX_NAME + '_ep'):
