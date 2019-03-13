@@ -27,10 +27,10 @@
     <param name="publish_frequency" type="double" value="30.0" />
   </node>
 
-<?ignore
-  <arg name="float_camera_urdf" default="$(find xacro)/xacro --inorder '$(find kobuki_description)/urdf/float_camera.urdf.xacro'"/>
+
+  <arg name="float_camera_urdf" default="$(find xacro)/xacro --inorder '$(find turtlebot_description)/urdf/float_camera.urdf.xacro'"/>
   <param name="float_camera_description" command="$(arg float_camera_urdf)"/>
-?>
+
   <!-- Gazebo model spawner -->
 <!--   <node name="spawn_float_camera_model" pkg="gazebo_ros" type="spawn_model"
         args=" -unpause -urdf -param float_camera_description -model float_camera"/> -->
