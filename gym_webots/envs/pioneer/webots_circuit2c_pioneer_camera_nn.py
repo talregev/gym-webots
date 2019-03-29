@@ -37,7 +37,7 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
         self.step        = rospy.ServiceProxy('/pioneer3at/robot/time_step', set_int)
         self.vel_servs = []
         for motorName in self.motorNames:
-            vel_serv    = rospy.ServiceProxy('/pioneer3at/' + motorName '/set_velocity', set_float)
+            vel_serv    = rospy.ServiceProxy('/pioneer3at/' + motorName + '/set_velocity', set_float)
             vel_servs.append(vel_serv)
         #enable lidar    
         enable_lidar = rospy.ServiceProxy('/pioneer3at/Sick_LMS_291/enable', set_int)
