@@ -230,9 +230,9 @@ if __name__ == '__main__':
     steps = 1000
 
     if not os.path.isdir(SAVE_PREFIX_PATH):
-        os.makedirs()
+        os.makedirs(SAVE_PREFIX_PATH)
     if not os.path.isdir(outdir):
-        os.makedirs()
+        os.makedirs(outdir)
 
     epochs_list = []
     _, _, files = next(os.walk(SAVE_PREFIX_PATH))
