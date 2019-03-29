@@ -9,9 +9,12 @@ import os
 import random
 
 from gym import utils, spaces
-from gym_gazebo.envs import gazebo_env
+from gym_webots.envs import webots_env
 from geometry_msgs.msg import Twist
 from std_srvs.srv import Empty
+from webots_ros.srv import set_float
+from webots_ros.srv import set_int
+from webots_ros.srv import get_bool
 
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import LaserScan
@@ -23,15 +26,28 @@ from skimage import transform, color, exposure
 from skimage.transform import rotate
 from skimage.viewer import ImageViewer
 
-class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
+class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
 
     def __init__(self):
         # Launch the simulation with the given launchfile name
-        gazebo_env.GazeboEnv.__init__(self, "GazeboCircuit2cTurtlebotLidar_v0.launch")
-        self.vel_pub = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=5)
-        self.unpause = rospy.ServiceProxy('/gazebo/unpause_physics', Empty)
-        self.pause = rospy.ServiceProxy('/gazebo/pause_physics', Empty)
-        self.reset_proxy = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
+        self.motorNames = ["front_left_wheel", "front_right_wheel", "back_left_wheel", "back_right_wheel"]
+        webots_env.WebotsEnv.__init__(self, "pioneer3at-circle.wbt")
+        rospy.wait_for_service('/pioneer3at/supervisor/simulation_reset')
+        self.reset_proxy = rospy.ServiceProxy('/pioneer3at/supervisor/simulation_reset', get_bool)
+        self.step        = rospy.ServiceProxy('/pioneer3at/robot/time_step', set_int)
+        self.vel_servs = []
+        for motorName in self.motorNames:
+            vel_serv    = rospy.ServiceProxy('/pioneer3at/' + motorName '/set_velocity', set_float)
+            vel_servs.append(vel_serv)
+        #enable lidar    
+        enable_lidar = rospy.ServiceProxy('/pioneer3at/Sick_LMS_291/enable', set_int)
+        enable_lidar(1)
+
+        #enable camera
+        enable_camera = rospy.ServiceProxy('pioneer3at/camera/enable', set_int)
+        enable_camera(1)
+
+        self.TIME_STEP = 32
 
         self.reward_range = (-np.inf, np.inf)
 
@@ -56,12 +72,6 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
         return [seed]
 
     def step(self, action):
-        rospy.wait_for_service('/gazebo/unpause_physics')
-        try:
-            self.unpause()
-        except (rospy.ServiceException) as e:
-            print ("/gazebo/unpause_physics service call failed")
-
         '''# 21 actions
         max_ang_speed = 0.3
         ang_vel = (action-10)*max_ang_speed*0.1 #from (-0.33 to + 0.33)
@@ -71,27 +81,37 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
         vel_cmd.angular.z = ang_vel
         self.vel_pub.publish(vel_cmd)'''
 
+        front_left_wheel  = self.vel_servs[0]
+        back_left_wheel   = self.vel_servs[2]
+        front_right_wheel = self.vel_servs[1]
+        back_right_wheel  = self.vel_servs[3]
+
         # 3 actions
         if action == 0: #FORWARD
-            vel_cmd = Twist()
-            vel_cmd.linear.x = 0.2
-            vel_cmd.angular.z = 0.0
-            self.vel_pub.publish(vel_cmd)
+            for vel_serv in self.vel_servs:
+                vel_serv(0.2)            
         elif action == 1: #LEFT
-            vel_cmd = Twist()
-            vel_cmd.linear.x = 0.05
-            vel_cmd.angular.z = 0.2
-            self.vel_pub.publish(vel_cmd)
+            front_left_wheel(0.25)
+            back_left_wheel(0.25)
+            front_right_wheel(0.05)
+            back_right_wheel(0.05)
+
         elif action == 2: #RIGHT
-            vel_cmd = Twist()
-            vel_cmd.linear.x = 0.05
-            vel_cmd.angular.z = -0.2
-            self.vel_pub.publish(vel_cmd)
+            front_left_wheel(0.05)
+            back_left_wheel(0.05)
+            front_right_wheel(0.25)
+            back_right_wheel(0.25)
+
+        rospy.wait_for_service('/pioneer3at/robot/time_step')
+        try:
+            self.step(TIME_STEP)
+        except (rospy.ServiceException) as e:
+            print ("/pioneer3at/robot/time_step service call failed")
 
         data = None
         while data is None:
             try:
-                data = rospy.wait_for_message('/scan', LaserScan, timeout=5)
+                data = rospy.wait_for_message('/pioneer3at/Sick_LMS_291/laser_scan/layer0', LaserScan, timeout=5)
             except:
                 pass
 
@@ -102,7 +122,7 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
         cv_image = None
         while image_data is None or success is False:
             try:
-                image_data = rospy.wait_for_message('/camera/rgb/image_raw', Image, timeout=5)
+                image_data = rospy.wait_for_message('/pioneer3at/camera/image', Image, timeout=5)
                 h = image_data.height
                 w = image_data.width
                 cv_image = CvBridge().imgmsg_to_cv2(image_data, "bgr8")
@@ -114,13 +134,6 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
                     #print("/camera/rgb/image_raw ERROR, retrying")
             except:
                 pass
-
-        rospy.wait_for_service('/gazebo/pause_physics')
-        try:
-            #resp_pause = pause.call()
-            self.pause()
-        except (rospy.ServiceException) as e:
-            print ("/gazebo/pause_physics service call failed")
 
 
         self.last50actions.pop(0) #remove oldest
@@ -189,27 +202,27 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
         self.last50actions = [0] * 50 #used for looping avoidance
 
         # Resets the state of the environment and returns an initial observation.
-        rospy.wait_for_service('/gazebo/reset_simulation')
+        rospy.wait_for_service('/pioneer3at/supervisor/simulation_reset')
         try:
             #reset_proxy.call()
-            self.reset_proxy()
+            self.reset_proxy(1)
         except (rospy.ServiceException) as e:
-            print ("/gazebo/reset_simulation service call failed")
+            print ("/pioneer3at/supervisor/simulation_reset service call failed")
 
         # Unpause simulation to make observation
-        rospy.wait_for_service('/gazebo/unpause_physics')
+        rospy.wait_for_service('/pioneer3at/robot/time_step')
         try:
             #resp_pause = pause.call()
-            self.unpause()
+            self.step(TIME_STEP)
         except (rospy.ServiceException) as e:
-            print ("/gazebo/unpause_physics service call failed")
+            print ("/pioneer3at/robot/time_step service call failed")
 
         image_data = None
         success=False
         cv_image = None
         while image_data is None or success is False:
             try:
-                image_data = rospy.wait_for_message('/camera/rgb/image_raw', Image, timeout=5)
+                image_data = rospy.wait_for_message('/pioneer3at/camera/image', Image, timeout=5)
                 h = image_data.height
                 w = image_data.width
                 cv_image = CvBridge().imgmsg_to_cv2(image_data, "bgr8")
@@ -221,13 +234,6 @@ class GazeboCircuit2cTurtlebotCameraNnEnv(gazebo_env.GazeboEnv):
                     #print("/camera/rgb/image_raw ERROR, retrying")
             except:
                 pass
-
-        rospy.wait_for_service('/gazebo/pause_physics')
-        try:
-            #resp_pause = pause.call()
-            self.pause()
-        except (rospy.ServiceException) as e:
-            print ("/gazebo/pause_physics service call failed")
 
         '''x_t = skimage.color.rgb2gray(cv_image)
         x_t = skimage.transform.resize(x_t,(32,32))
