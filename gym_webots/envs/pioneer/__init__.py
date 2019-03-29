@@ -1,2 +1,2 @@
-from gym_webots.envs.pionner.webots_circuit2c_pioneet_camera_nn import WebotsCircuit2cPionner3atCameraNnEnv
+from gym_webots.envs.pioneer.webots_circuit2c_pioneer_camera_nn import WebotsCircuit2cPionner3atCameraNnEnv
 

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # Pioneer3at envs
 register(
     id='WebotsCircuit2cPioneerCameraNnEnv-v0',
-    entry_point='gym_webots.envs.turtlebot:WebotsCircuit2cPionner3atCameraNnEnv',
+    entry_point='gym_webots.envs.pioneer:WebotsCircuit2cPionner3atCameraNnEnv',
     # More arguments here
 )
 
