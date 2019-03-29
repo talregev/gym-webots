@@ -24,6 +24,8 @@ class WebotsEnv(gym.Env):
         self.port = str(random_number) #os.environ["ROS_PORT_SIM"]
         self.port_webots = str(random_number+1) #os.environ["ROS_PORT_SIM"]
 
+        self.port = str(11311)
+
         os.environ["ROS_MASTER_URI"] = "http://localhost:"+self.port
         #os.environ["Webots stream"] = "http://localhost:"+self.port_webots
         #
@@ -33,8 +35,8 @@ class WebotsEnv(gym.Env):
         print("Webots stream=http://localhost:"+self.port_webots + "\n")
 
         # self.port = os.environ.get("ROS_PORT_SIM", "11311")
-        roscore_path = os.path(subprocess.check_output(["which", "roscore"]))
-        webots_path = os.path(subprocess.check_output(["which", "Webots"]))
+        #roscore_file = subprocess.check_output(["which", "roscore"])
+        #webots_file = (subprocess.check_output(["which", "webots"]))
 
         # NOTE: It doesn't make sense to launch a roscore because it will be done when spawing Gazebo, which also need
         #   to be the first node in order to initialize the clock.
@@ -43,19 +45,21 @@ class WebotsEnv(gym.Env):
         # time.sleep(1)
         # print ("Roscore launched!")
 
-        
+
 
         if worldfile.startswith("/"):
-            fullpath = launchfile
+            fullpath = worldfile
         else:
             fullpath = os.path.join(os.path.dirname(__file__), "assets", "worlds", worldfile)
 
         if not os.path.exists(fullpath):
-            raise IOError("File "+fullpath+" does not exist")
+            raise IOError("File " + fullpath + " does not exist")
 
-        self._roscore = subprocess.Popen([sys.executable, roscore_path, "-p", self.port, fullpath])
+        self._roscore = subprocess.Popen(["roscore", "-p", self.port])
+        self._roscore = subprocess.Popen(["rosparam", "set", "/use_sim_time", "true"])
         port_param = '--stream="port=' + self.port_webots + '"'
-        self._webots = subprocess.Popen([sys.executable, webots_path, "--batch", "--no-sandbox", "--stdout", "--stderr", port_param,  fullpath])
+        self._webots = subprocess.Popen(["webots", "--batch", "--no-sandbox", "--stdout", "--stderr", port_param,  fullpath])
+
 
         print ("Webots launched!")
 
