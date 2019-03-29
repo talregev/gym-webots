@@ -8,7 +8,7 @@ https://gist.github.com/wingedsheep/4199594b02138dd427c22a540d6d6b8d
 '''
 import gym
 from gym import wrappers
-import gym_gazebo
+import gym_webots
 import time
 from distutils.dir_util import copy_tree
 import os
@@ -220,11 +220,11 @@ def clear_monitor_files(training_dir):
 if __name__ == '__main__':
 
     # REMEMBER!: turtlebot_cnn_setup.bash must be executed.
-    env = gym.make('GazeboCircuit2cTurtlebotCameraNnEnv-v0')
+    env = gym.make('WebotsCircuit2cPioneerCameraNnEnv-v0')
 
     # Parameters:
-    outdir = '/tmp/gazebo_gym_experiments/'
-    SAVE_PREFIX_PATH = '/home/tal/deep/data/gym-gazebo'
+    outdir = '/tmp/webots_gym_experiments/'
+    SAVE_PREFIX_PATH = '/home/tal/deep/data/gym-webots'
     SAVE_PREFIX_NAME = 'turtle_c2c_dqn'
     epochs = 100000
     steps = 1000
