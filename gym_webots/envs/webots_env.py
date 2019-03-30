@@ -56,9 +56,9 @@ class WebotsEnv(gym.Env):
             raise IOError("File " + fullpath + " does not exist")
 
         self._roscore = subprocess.Popen(["roscore", "-p", self.port])
-        self._roscore = subprocess.Popen(["rosparam", "set", "/use_sim_time", "true"])
+        #self._roscore = subprocess.Popen(["rosparam", "set", "/use_sim_time", "true"])
         port_param = '--stream="port=' + self.port_webots + '"'
-        self._webots = subprocess.Popen(["webots", "--batch", "--no-sandbox", "--stdout", "--stderr", port_param,  fullpath])
+        self._webots = subprocess.Popen(["webots", "--batch", "--no-sandbox", "--stderr", port_param,  fullpath])
 
 
         print ("Webots launched!")
