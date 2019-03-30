@@ -84,8 +84,8 @@ DEF PIONEER_3AT Pioneer3at {
       translation 0 0.17 -0.22
       width 256
       height 128
-      motionBlur 500
-      noise 0.02
+      motionBlur 0
+      noise 0
     }
     Accelerometer {
       lookupTable [
