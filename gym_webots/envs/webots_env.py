@@ -24,7 +24,7 @@ class WebotsEnv(gym.Env):
         self.port = str(random_number) #os.environ["ROS_PORT_SIM"]
         self.port_webots = str(random_number+1) #os.environ["ROS_PORT_SIM"]
 
-        self.port = str(11311)
+        #self.port = str(11311)
 
         os.environ["ROS_MASTER_URI"] = "http://localhost:"+self.port
         #os.environ["Webots stream"] = "http://localhost:"+self.port_webots
@@ -32,7 +32,7 @@ class WebotsEnv(gym.Env):
         # self.ros_master_uri = os.environ["ROS_MASTER_URI"];
 
         print("ROS_MASTER_URI=http://localhost:"+self.port + "\n")
-        print("Webots stream=http://localhost:"+self.port_webots + "\n")
+        print("Webots Stream=http://localhost:"+self.port_webots + "\n")
 
         # self.port = os.environ.get("ROS_PORT_SIM", "11311")
         #roscore_file = subprocess.check_output(["which", "roscore"])
@@ -58,6 +58,7 @@ class WebotsEnv(gym.Env):
         self._roscore = subprocess.Popen(["roscore", "-p", self.port])
         #self._roscore = subprocess.Popen(["rosparam", "set", "/use_sim_time", "true"])
         port_param = '--stream="port=' + self.port_webots + '"'
+        stdout_param ='--stdout'
         self._webots = subprocess.Popen(["webots", "--batch", "--no-sandbox", "--stderr", port_param,  fullpath])
 
 

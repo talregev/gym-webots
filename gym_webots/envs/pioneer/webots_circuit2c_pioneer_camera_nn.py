@@ -29,28 +29,40 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
 
     def __init__(self):
         # Launch the simulation with the given launchfile name
-        self.motorNames = ["front_left_wheel", "front_right_wheel", "back_left_wheel", "back_right_wheel"]
         webots_env.WebotsEnv.__init__(self, "pioneer3at-circle.wbt")
 
+        self.motorNames = ["front_left_wheel", "front_right_wheel", "back_left_wheel", "back_right_wheel"]
+
         rospy.wait_for_service('/pioneer3at/supervisor/simulation_reset')
-        self.reset_proxy = rospy.ServiceProxy('/pioneer3at/supervisor/simulation_reset', get_bool)
-        # self.step        = rospy.ServiceProxy('/pioneer3at/robot/time_step', set_int)
-        self.mode        = rospy.ServiceProxy('/pioneer3at/supervisor/simulation_set_mode', set_int)
-        self.vel_servs = []
+        self.reset_service = rospy.ServiceProxy('/pioneer3at/supervisor/simulation_reset', get_bool)
+        self.step_service  = rospy.ServiceProxy('/pioneer3at/robot/time_step', set_int)
+        self.mode_service  = rospy.ServiceProxy('/pioneer3at/supervisor/simulation_set_mode', set_int)
+        self.enable_camera_service  = rospy.ServiceProxy('/pioneer3at/camera/enable', set_int)
+        self.enable_lidar_service   = rospy.ServiceProxy('/pioneer3at/Sick_LMS_291/enable', set_int)
+        self.vel_services = []
+        self.pos_services = []
+
         for motorName in self.motorNames:
+            #velocity services
             srv_name = '/pioneer3at/' + motorName + '/set_velocity'
             rospy.wait_for_service(srv_name)
             vel_serv = rospy.ServiceProxy(srv_name, set_float)
-            self.vel_servs.append(vel_serv)
+            self.vel_services.append(vel_serv)
+
+            #position services
+            serv_name = '/pioneer3at/' + motorName + '/set_position'
+            rospy.wait_for_service(serv_name)
+            pos_serv = rospy.ServiceProxy(serv_name, set_float)
+            self.pos_services.append(pos_serv)                                                  
 
         #run webots in run mode (work good with sync and step)
-        self.mode(1)
+        self.mode_service(1)
 
 
-        self.basic_step = rospy.ServiceProxy('/pioneer3at/robot/get_basic_time_step', get_float)
-        basic_step = self.basic_step(1)
+        self.basic_step_service = rospy.ServiceProxy('/pioneer3at/robot/get_basic_time_step', get_float)
+        basic_step = self.basic_step_service(1)
 
-        self.TIME_STEP = basic_step.value * 100
+        self.TIME_STEP = basic_step.value
 
         self.reward_range = (-np.inf, np.inf)
 
@@ -75,59 +87,56 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
         return [seed]
 
     def enable_sensors(self):
+        #print('enable_sensors')
         #enable camera
-        srv_name = '/pioneer3at/camera/enable'
-        rospy.wait_for_service(srv_name)
-        enable_camera = rospy.ServiceProxy(srv_name, set_int)
-        responde = enable_camera(1)
+        responde = self.enable_camera_service(1)
+        #print(responde)
 
-        #enable lidar    
-        srv_name = '/pioneer3at/Sick_LMS_291/enable'
-        rospy.wait_for_service(srv_name)
-        enable_lidar = rospy.ServiceProxy(srv_name, set_int)
-        responde = enable_lidar(1)
+        #enable lidar
+        responde = self.enable_lidar_service(1)
+        #print(responde)
+
+    def enable_motors(self):
+        #print('enable_motors')
+        for service in self.pos_services:
+            res=service(float('inf'))
+            #print(res)
+
+    def stop_robot(self):
+        #print('vel_services')
+        for vel_serv in self.vel_services:
+            res=vel_serv(0)
+            #print(res)
 
     def step_sim(self):
-        rospy.wait_for_service('/pioneer3at/robot/time_step')
-        try:
-            self.step( self.TIME_STEP)
-            print("step_sim")
-        except (rospy.ServiceException) as e:
-            print ("/pioneer3at/robot/time_step service call failed" + str(e))
-
-
+        self.step_service(self.TIME_STEP)
 
     def step(self, action):
-        '''# 21 actions
-        max_ang_speed = 0.3
-        ang_vel = (action-10)*max_ang_speed*0.1 #from (-0.33 to + 0.33)
+        #print('step')
 
-        vel_cmd = Twist()
-        vel_cmd.linear.x = 0.2
-        vel_cmd.angular.z = ang_vel
-        self.vel_pub.publish(vel_cmd)'''
-
-        front_left_wheel  = self.vel_servs[0]
-        back_left_wheel   = self.vel_servs[2]
-        front_right_wheel = self.vel_servs[1]
-        back_right_wheel  = self.vel_servs[3]
+        front_left_wheel_service  = self.vel_services[0]
+        back_left_wheel_service   = self.vel_services[2]
+        front_right_wheel_service = self.vel_services[1]
+        back_right_wheel_service  = self.vel_services[3]
 
 
         # 3 actions
         if action == 0: #FORWARD
-            for vel_serv in self.vel_servs:
-                vel_serv(6)
-        elif action == 1: #LEFT
-            front_left_wheel(6)
-            back_left_wheel(6)
-            front_right_wheel(0.3)
-            back_right_wheel(0.3)
+            front_left_wheel_service(6)
+            back_left_wheel_service(6)
+            front_right_wheel_service(6)
+            back_right_wheel_service(6)
+        elif action == 1: #RIGTH
+            front_left_wheel_service(6)
+            back_left_wheel_service(6)
+            front_right_wheel_service(0.3)
+            back_right_wheel_service(0.3)
 
-        elif action == 2: #RIGHT
-            front_left_wheel(0.3)
-            back_left_wheel(0.3)
-            front_right_wheel(6)
-            back_right_wheel(6)
+        elif action == 2: #LEFT
+            front_left_wheel_service(0.3)
+            back_left_wheel_service(0.3)
+            front_right_wheel_service(6)
+            back_right_wheel_service(6)
 
         #self.step_sim()
 
@@ -136,10 +145,8 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
             try:
                 data = rospy.wait_for_message('/pioneer3at/Sick_LMS_291/laser_scan/layer0', LaserScan, timeout=5)
             except:
+                print("/pioneer3at/Sick_LMS_291/laser_scan/layer0 ERROR, retrying")
                 #self.step_sim()
-                pass
-
-        done = self.calculate_observation(data)
 
         image_data = None
         success=False
@@ -158,8 +165,9 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
                     #self.step_sim()
 
             except:
+                print("/pioneer3at/camera/image ERROR, retrying")
                 #self.step_sim()
-                pass
+
 
         self.last50actions.pop(0) #remove oldest
         if action == 0:
@@ -191,6 +199,7 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
 
         center_detour = abs(right_sum - left_sum)/5
 
+        done = self.calculate_observation(data)
         # 3 actions
         if not done:
             if action == 0:
@@ -223,30 +232,19 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
         #return self.s_t, reward, done, {} # observation, reward, done, info
 
     def reset(self):
-
+        #print('reset')
         self.last50actions = [0] * 50 #used for looping avoidance
 
         # Resets the state of the environment and returns an initial observation.
         rospy.wait_for_service('/pioneer3at/supervisor/simulation_reset')
-        try:
-            #reset_proxy.call()
-            self.reset_proxy(1)
-        except (rospy.ServiceException) as e:
-            print ("/pioneer3at/supervisor/simulation_reset service call failed")
+        self.reset_service(1)
 
         #wait until the simulation is reset
-        # Unpause simulation to make observation
-        time.sleep(3)
+        # Unpause simulation to make observation 
+        time.sleep(1) 
         self.enable_sensors()
-
-        for motorName in self.motorNames:
-            serv_name = '/pioneer3at/' + motorName + '/set_position'
-            rospy.wait_for_service(serv_name)
-            position_serv = rospy.ServiceProxy(serv_name, set_float)
-            position_serv(float('inf'))
-
-
-        #self.step_sim()
+        self.stop_robot()
+        self.enable_motors()
 
         image_data = None
         success=False
@@ -261,11 +259,11 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
                 if not (cv_image[h//2,w//2,0]==178 and cv_image[h//2,w//2,1]==178 and cv_image[h//2,w//2,2]==178):
                     success = True
                 else:
-                    #self.step_sim()
                     print("/pioneer3at/camera/image ERROR, retrying")
+                    #self.step_sim()
             except:
+                print("/pioneer3at/camera/image ERROR, retrying")                                
                 #self.step_sim()
-                pass
 
         '''x_t = skimage.color.rgb2gray(cv_image)
         x_t = skimage.transform.resize(x_t,(32,32))
