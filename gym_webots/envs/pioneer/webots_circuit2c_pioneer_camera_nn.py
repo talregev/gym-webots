@@ -89,11 +89,11 @@ class WebotsCircuit2cPionner3atCameraNnEnv(webots_env.WebotsEnv):
     def enable_sensors(self):
         #print('enable_sensors')
         #enable camera
-        responde = self.enable_camera_service(1)
+        responde = self.enable_camera_service(self.TIME_STEP)
         #print(responde)
 
         #enable lidar
-        responde = self.enable_lidar_service(1)
+        responde = self.enable_lidar_service(self.TIME_STEP)
         #print(responde)
 
     def enable_motors(self):
